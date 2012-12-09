@@ -31,27 +31,27 @@ Usage
 
 A container needs to be setup with swiftnbd-setup to be used by the server:
 
-  swiftbdd-setup username password container number-of-blocks
+    swiftbdd-setup username password container number-of-blocks
 
 For example, setup a 1GB storage in myndb0 container:
 
-  swiftbdd-setup user pass myndb0 16384
+    swiftbdd-setup user pass myndb0 16384
 
 (by default block size is 8KB, so 16384 * 65536 is 1GB)
 
 After the container is setup, it can be served with swiftnbds:
 
-  swiftnbds username password container
+    swiftnbds username password container
 
 Then you can use nbd-client to create the block device (as root):
 
-  modprobe nbd
-  nbd-client 127.0.0.1 10811 /dev/nbd0
+    modprobe nbd
+    nbd-client 127.0.0.1 10811 /dev/nbd0
 
 Now just use /dev/nbd0 as a regular block device, ie:
 
-  mkfs.ext2 /dev/nbd0
-  mount /dev/nbd0 /mnt
+    mkfs.ext2 /dev/nbd0
+    mount /dev/nbd0 /mnt
 
 
 License
