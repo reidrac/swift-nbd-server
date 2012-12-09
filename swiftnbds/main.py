@@ -98,7 +98,6 @@ class Main(object):
     NBD_CMD_READ = 0
     NBD_CMD_WRITE = 1
     NBD_CMD_DISC = 2
-    # TODO
     NBD_CMD_FLUSH = 3
 
     def handle_request(self, socket, address):
