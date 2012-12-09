@@ -37,7 +37,7 @@ For example, setup a 1GB storage in myndb0 container:
 
     swiftnbd-setup user pass mynbd0 16384
 
-(by default block size in swift is 64KB, so 16384 * 65536 is 1GB)
+(by default blocks stored in swift are 64KB, so 16384 * 65536 is 1GB)
 
 After the container is setup, it can be served with swiftnbds:
 
