@@ -1,0 +1,5 @@
+- Make it work!
+- Tests
+- When possible, handle errors with NBD protocol instead of disconnecting
+- Caching
+- Use the new NBD handshake protocol
