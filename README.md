@@ -35,7 +35,7 @@ A container needs to be setup with swiftnbd-setup to be used by the server:
 
 For example, setup a 1GB storage in myndb0 container:
 
-    swiftnbd-setup user pass myndb0 16384
+    swiftnbd-setup user pass mynbd0 16384
 
 (by default block size is 8KB, so 16384 * 65536 is 1GB)
 
