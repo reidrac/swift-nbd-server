@@ -31,11 +31,11 @@ Usage
 
 A container needs to be setup with swiftnbd-setup to be used by the server:
 
-    swiftbdd-setup username password container number-of-blocks
+    swiftnbd-setup username password container number-of-blocks
 
 For example, setup a 1GB storage in myndb0 container:
 
-    swiftbdd-setup user pass myndb0 16384
+    swiftnbd-setup user pass myndb0 16384
 
 (by default block size is 8KB, so 16384 * 65536 is 1GB)
 
