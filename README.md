@@ -9,7 +9,7 @@ References:
  - https://github.com/yoe/nbd/blob/master/doc/proto.txt
  - http://lists.canonical.org/pipermail/kragen-hacks/2004-May/000397.html
 
-**Warning**: this is a proof of concept and in its current state is alpha quality.
+**Warning**: this is a proof of concept and in current state is alpha quality.
 
 
 Install
