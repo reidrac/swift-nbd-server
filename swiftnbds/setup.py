@@ -41,6 +41,7 @@ class Main(object):
 
         self.log = setLog(debug=self.args.verbose)
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
+        self.proctitle = "%s setting up %s" % (__package__, self.args.container)
 
     def run(self):
 
