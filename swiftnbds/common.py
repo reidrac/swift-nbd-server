@@ -136,8 +136,7 @@ class SwiftBlockFile(object):
         try:
             self.cli.put_object(self.container, block_name, StringIO(data))
         except client.ClientException as ex:
-            if ex.http_status != 404:
-                raise IOError("Storage error: %s" % ex)
+            raise IOError("Storage error: %s" % ex)
 
         self.cache[block_num] = data
 
