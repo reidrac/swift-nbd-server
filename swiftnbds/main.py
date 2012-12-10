@@ -8,7 +8,6 @@ from gevent.server import StreamServer
 
 from swiftnbds.const import version, description, project_url, auth_url
 from swiftnbds.common import setLog, getMeta, SwiftBlockFile
-from swiftnbds.server import handle_request
 
 class Main(object):
     def __init__(self):
