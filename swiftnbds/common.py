@@ -2,6 +2,7 @@
 
 import logging
 from cStringIO import StringIO
+from hashlib import md5
 
 from swiftclient import client
 
@@ -134,9 +135,14 @@ class SwiftBlockFile(object):
 
         block_name = "disk.part/%.8i" % block_num
         try:
-            self.cli.put_object(self.container, block_name, StringIO(data))
+            etag = self.cli.put_object(self.container, block_name, StringIO(data))
         except client.ClientException as ex:
             raise IOError("Storage error: %s" % ex)
+
+        checksum = md5(data).hexdigest()
+        etag = etag.lower()
+        if etag != checksum:
+            raise IOError("Block integrity error (block_num=%s)" % block_num)
 
         self.cache[block_num] = data
 
