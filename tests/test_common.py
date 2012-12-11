@@ -7,7 +7,7 @@ class MockConnection(object):
     """
     Mock up for the Swift client.
 
-    Initialised with 2048 blocks of 512 bytes.
+    Initialised with 8 blocks of 512 bytes.
     """
 
     block_size = 512
@@ -18,7 +18,7 @@ class MockConnection(object):
             self.http_status = http_status
 
     def __init__(self):
-        MockConnection.blocks = dict(("disk.part/%.8i" % block_num, '\xff'*MockConnection.block_size) for block_num in range(2048))
+        MockConnection.blocks = dict(("disk.part/%.8i" % block_num, '\xff'*MockConnection.block_size) for block_num in range(8))
 
     @staticmethod
     def block(block_num):
@@ -48,14 +48,14 @@ class MockConnection(object):
 class SwiftBlockFileTestCase(unittest.TestCase):
     """Test the block-split file class."""
     def setUp(self):
-        # monkey patch the swiftclient to use out Mock up
+        # monkey-patch swiftclient to use out mock up
         import swiftnbds.common as common
         common.client = MockConnection
         from swiftnbds.common import SwiftBlockFile
 
         # create a disk doubling the actual size of the mock up so we
         # have some uninitialised space to run tests
-        self.store = SwiftBlockFile('url', 'user', 'pass', 'container', 512, 4096)
+        self.store = SwiftBlockFile('url', 'user', 'pass', 'container', 512, 16)
 
     def tearDown(self):
         pass
@@ -66,7 +66,7 @@ class SwiftBlockFileTestCase(unittest.TestCase):
         self.assertEqual(data, '\xff'*512)
 
     def test_read_full_block_no_content(self):
-        self.store.seek(2048*512)
+        self.store.seek(8*512)
         data = self.store.read(512)
         self.assertEqual(data, '\0'*512)
 
@@ -75,7 +75,7 @@ class SwiftBlockFileTestCase(unittest.TestCase):
         self.store.write('X' * 512)
         self.assertEqual(MockConnection.block(0), 'X'*512)
 
-        self.store.seek(2048*512)
+        self.store.seek(8*512)
         self.store.write('X' * 512)
-        self.assertEqual(MockConnection.block(2048), 'X'*512)
+        self.assertEqual(MockConnection.block(8), 'X'*512)
 
