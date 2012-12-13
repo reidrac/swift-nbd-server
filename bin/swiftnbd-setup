@@ -3,12 +3,10 @@
 import sys
 
 from os.path import basename
-from setproctitle import setproctitle
 
 from swiftnbds.setup import Main
 
 if __name__ == "__main__":
     main = Main()
-    setproctitle(main.proctitle)
     sys.exit(main.run())
 
