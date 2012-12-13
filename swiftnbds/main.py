@@ -106,7 +106,7 @@ class Main(object):
                 self.block_size = int(self.meta['block-size'])
                 self.blocks = int(self.meta['blocks'])
             except ValueError as ex:
-                self.log.error("%s doesn't appear to be correct: %s" (self.args.container, ex))
+                self.log.error("%s doesn't appear to be correct: %s" % (self.args.container, ex))
                 return 1
 
             self.export_size = self.block_size * self.blocks
