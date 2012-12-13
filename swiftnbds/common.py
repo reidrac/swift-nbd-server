@@ -88,7 +88,7 @@ class SwiftBlockFile(object):
         reminder = len(data) % self.block_size
         if reminder != 0:
             # block-align the end of data
-            block = self.fetch_block(len(data) / self.block_size)
+            block = self.fetch_block(self.block_num + (len(data) / self.block_size))
             data += block[reminder:]
 
         assert len(data) % self.block_size == 0, "Data not aligned!"
