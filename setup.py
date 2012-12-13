@@ -19,7 +19,7 @@ setup(name="swiftnbds",
       license="MIT",
       include_package_data=True,
       zip_safe=False,
-      install_requires=["python-swiftclient>=1.2.0", "gevent>=0.13.8", "setproctitle>=1.1.6"],
+      install_requires=["python-swiftclient>=1.2.0", "gevent>=0.13.8"],
       scripts=["bin/swiftnbds", "bin/swiftnbd-setup"],
       packages=find_packages(exclude=["tests"]),
       classifiers=[
