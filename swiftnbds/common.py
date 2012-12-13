@@ -23,6 +23,7 @@ THE SOFTWARE.
 """
 
 import logging
+import errno
 from cStringIO import StringIO
 from hashlib import md5
 from ConfigParser import RawConfigParser
@@ -91,7 +92,7 @@ class SwiftBlockFile(object):
         try:
             self.cli.get_container(container)
         except client.ClientException as ex:
-            raise IOError("Storage error: %s" % ex.http_status)
+            raise IOError(errno.EACCES, "Storage error: %s" % ex.http_status)
 
     def read(self, size):
 
@@ -159,7 +160,7 @@ class SwiftBlockFile(object):
                 _, data = self.cli.get_object(self.container, block_name)
             except client.ClientException as ex:
                 if ex.http_status != 404:
-                    raise IOError("Storage error: %s" % ex)
+                    raise IOError(errno.EIO, "Storage error: %s" % ex)
                 return '\0' * self.block_size
 
             self.cache[block_num] = data
@@ -171,18 +172,18 @@ class SwiftBlockFile(object):
         try:
             etag = self.cli.put_object(self.container, block_name, StringIO(data))
         except client.ClientException as ex:
-            raise IOError("Storage error: %s" % ex)
+            raise IOError("Storage error: %s" % ex, errno=errno.EIO)
 
         checksum = md5(data).hexdigest()
         etag = etag.lower()
         if etag != checksum:
-            raise IOError("Block integrity error (block_num=%s)" % block_num)
+            raise IOError(errno.EAGAIN, "Block integrity error (block_num=%s)" % block_num)
 
         self.cache[block_num] = data
 
     def seek(self, offset):
         if offset < 0 or offset > self.size:
-            raise IOError("Offset out of bounds")
+            raise IOError(errno.ESPIPE, "Offset out of bounds")
 
         self.pos = offset
 

@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 import unittest
 from hashlib import md5
+import errno
 
 class MockConnection(object):
     """
@@ -158,6 +159,12 @@ class SwiftBlockFileTestCase(unittest.TestCase):
     def test_seek_bad_offset(self):
         self.assertRaises(IOError, self.store.seek, -1)
         self.assertRaises(IOError, self.store.seek, 10000000000000)
+        try:
+            self.store.seek(-1)
+        except IOError as ex:
+            self.assertEqual(ex.errno, errno.ESPIPE)
+        else:
+            self.fail("didn't raise IOError")
 
     def test_tell(self):
         self.store.seek(0)
