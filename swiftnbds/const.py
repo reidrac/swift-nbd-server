@@ -9,3 +9,6 @@ auth_url = "https://auth.storage.memset.com/v1.0"
 # size of the blocks
 block_size = 1024*64
 
+# user/password information for each container
+secrets_file = "/etc/swiftnbd/secrets.conf"
+

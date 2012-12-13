@@ -6,8 +6,8 @@ import struct
 from swiftclient import client
 from gevent.server import StreamServer
 
-from swiftnbds.const import version, description, project_url, auth_url
-from swiftnbds.common import setLog, getMeta, SwiftBlockFile
+from swiftnbds.const import version, description, project_url, auth_url, secrets_file
+from swiftnbds.common import setLog, getMeta, getSecrets, SwiftBlockFile
 
 class Main(object):
     def __init__(self):
@@ -21,11 +21,13 @@ class Main(object):
                                 epilog="Contact and support: %s" % project_url
                                 )
 
-        parser.add_argument("username", help="username with rw container access")
-        parser.add_argument("password", help="access password")
         parser.add_argument("container", help="container used as storage (setup it first)")
 
         parser.add_argument("--version", action="version", version="%(prog)s "  + version)
+
+        parser.add_argument("--secrets", dest="secrets_file",
+                            default=secrets_file,
+                            help="filename containing user/password (default: %s)" % secrets_file)
 
         parser.add_argument("-a", "--auth-url", dest="authurl",
                             default=auth_url,
@@ -49,11 +51,15 @@ class Main(object):
 
         self.log = setLog(debug=self.args.verbose)
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
-        self.proctitle = "%s serving %s" % (__package__, self.args.container)
+
+        try:
+            self.username, self.password = getSecrets(self.args.container, self.args.secrets_file)
+        except ValueError as ex:
+            parser.error(ex)
 
     def run(self):
 
-        cli = client.Connection(self.args.authurl, self.args.username, self.args.password)
+        cli = client.Connection(self.args.authurl, self.username, self.password)
 
         try:
             headers, _ = cli.get_container(self.args.container)
@@ -104,7 +110,7 @@ class Main(object):
         host, port = address
         self.log.debug("Incoming connection from %s:%s" % address)
 
-        store = SwiftBlockFile(self.args.authurl, self.args.username, self.args.password, self.args.container, self.block_size, self.blocks)
+        store = SwiftBlockFile(self.args.authurl, self.username, self.password, self.args.container, self.block_size, self.blocks)
         fo = socket.makefile()
 
         # initial handshake (old-style)

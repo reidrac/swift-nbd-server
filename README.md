@@ -29,19 +29,26 @@ To install the software, run the following command:
 Usage
 -----
 
-A container needs to be setup with swiftnbd-setup to be used by the server:
+A container needs to be setup with swiftnbd-setup to be used by the server. First create
+a secrets.conf file:
 
-    swiftnbd-setup username password container number-of-blocks
+    [container-name]
+    username = user
+    password = pass
+
+Then run the setup tool using the container name as first parameter:
+
+    swiftnbd-setup container-name number-of-blocks
 
 For example, setup a 1GB storage in myndb0 container:
 
-    swiftnbd-setup user pass mynbd0 16384
+    swiftnbd-setup mynbd0 16384
 
 (by default blocks stored in swift are 64KB, so 16384 * 65536 is 1GB)
 
 After the container is setup, it can be served with swiftnbds:
 
-    swiftnbds username password container
+    swiftnbds container-name
 
 Then you can use nbd-client to create the block device (as root):
 
@@ -50,7 +57,7 @@ Then you can use nbd-client to create the block device (as root):
 
 Now just use /dev/nbd0 as a regular block device, ie:
 
-    mkfs.ext2 /dev/nbd0
+    mkfs.ext3 /dev/nbd0
     mount /dev/nbd0 /mnt
 
 

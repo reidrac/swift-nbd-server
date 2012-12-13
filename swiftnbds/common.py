@@ -3,8 +3,20 @@
 import logging
 from cStringIO import StringIO
 from hashlib import md5
+from ConfigParser import RawConfigParser
 
 from swiftclient import client
+
+def getSecrets(container, secrets_file):
+    """Read secrets"""
+
+    conf = RawConfigParser(dict(username=None, password=None))
+    conf.read(secrets_file)
+
+    if not conf.has_section(container):
+        raise ValueError("%s not found in %s" % (container, secrets_file))
+
+    return (conf.get(container, 'username'), conf.get(container, 'password'))
 
 def setLog(debug=False):
     """Setup logger"""
