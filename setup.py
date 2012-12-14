@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-from swiftndbs.const import version, project_url, description
+from swiftnbds.const import version, project_url, description
 
 def readme():
     try:
