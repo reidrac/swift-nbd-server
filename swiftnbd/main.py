@@ -136,7 +136,7 @@ class Main(object):
 
     def handle_request(self, socket, address):
         host, port = address
-        self.log.debug("Incoming connection from %s:%s" % address)
+        self.log.info("Incoming connection from %s:%s" % address)
 
         store = SwiftBlockFile(self.args.authurl, self.username, self.password, self.args.container, self.block_size, self.blocks)
         fo = socket.makefile()
