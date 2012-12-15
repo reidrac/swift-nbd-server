@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-swiftnbds. test launcher
+swiftnbd. test launcher
 Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-from swiftnbds.const import version, project_url, description
+from swiftnbd.const import version, project_url, description
 
 def readme():
     try:
@@ -9,7 +9,7 @@ def readme():
     except:
         return ""
 
-setup(name="swiftnbds",
+setup(name="swiftnbd",
       version=version,
       description=description,
       long_description=readme(),
@@ -20,7 +20,7 @@ setup(name="swiftnbds",
       include_package_data=True,
       zip_safe=False,
       install_requires=["python-swiftclient>=1.2.0", "gevent>=0.13.8"],
-      scripts=["bin/swiftnbds", "bin/swiftnbd-setup"],
+      scripts=["bin/swiftnbdd", "bin/swiftnbd-setup"],
       packages=find_packages(exclude=["tests"]),
       classifiers=[
         "Development Status :: 3 - Alpha",

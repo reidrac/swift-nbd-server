@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-swiftnbds. setup module
+swiftnbd. setup module
 Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,12 +26,12 @@ from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbds.const import version, project_url, auth_url, block_size, secrets_file
-from swiftnbds.common import setLog, setMeta, getMeta, getSecrets
+from swiftnbd.const import version, project_url, auth_url, block_size, secrets_file
+from swiftnbd.common import setLog, setMeta, getMeta, getSecrets
 
 class Main(object):
     def __init__(self):
-        parser = ArgumentParser(description="Setup a OpenStack Object Storage container to be used by swiftnbds.",
+        parser = ArgumentParser(description="Setup a OpenStack Object Storage container to be used by swiftnbdd.",
                                 epilog="Contact and support: %s" % project_url
                                 )
 

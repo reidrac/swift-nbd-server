@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-swiftnbds. tests for the common module
+swiftnbd. tests for the common module
 Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -72,9 +72,9 @@ class SwiftBlockFileTestCase(unittest.TestCase):
     """Test the block-split file class."""
     def setUp(self):
         # monkey-patch swiftclient to use out mock up
-        import swiftnbds.common as common
+        import swiftnbd.common as common
         common.client = MockConnection
-        from swiftnbds.common import SwiftBlockFile
+        from swiftnbd.common import SwiftBlockFile
 
         # create a disk doubling the actual size of the mock up so we
         # have some uninitialised space to run tests

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-swiftnbds. main module
+swiftnbd. main module
 Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,8 +28,8 @@ import struct
 from swiftclient import client
 from gevent.server import StreamServer
 
-from swiftnbds.const import version, description, project_url, auth_url, secrets_file
-from swiftnbds.common import setLog, getMeta, getSecrets, SwiftBlockFile
+from swiftnbd.const import version, description, project_url, auth_url, secrets_file
+from swiftnbd.common import setLog, getMeta, getSecrets, SwiftBlockFile
 
 class Main(object):
     def __init__(self):
