@@ -1,5 +1,5 @@
-Swift NBD Server (swiftnbds)
-============================
+Swift NBD Server
+================
 
 This is a Network Block Device (NBD) server for OpenStack Object Storage (Swift).
 
@@ -46,9 +46,9 @@ For example, setup a 1GB storage in myndb0 container:
 
 (by default blocks stored in swift are 64KB, so 16384 * 65536 is 1GB)
 
-After the container is setup, it can be served with swiftnbds:
+After the container is setup, it can be served with swiftnbdd:
 
-    swiftnbds container-name
+    swiftnbdd container-name
 
 Then you can use nbd-client to create the block device (as root):
 
