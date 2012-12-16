@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 swiftnbd. server module
 Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
