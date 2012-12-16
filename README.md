@@ -42,13 +42,13 @@ Then run the setup tool using the container name as first parameter:
 
 For example, setup a 1GB storage in myndb0 container:
 
-    swiftnbd-setup mynbd0 16384
+    swiftnbd-setup mynbd0 16384 --secrets secrets.conf
 
 (by default blocks stored in swift are 64KB, so 16384 * 65536 is 1GB)
 
 After the container is setup, it can be served with swiftnbdd:
 
-    swiftnbdd container-name
+    swiftnbdd container-name --secrets secrets.conf
 
 Then you can use nbd-client to create the block device (as root):
 
@@ -59,6 +59,8 @@ Now just use /dev/nbd0 as a regular block device, ie:
 
     mkfs.ext3 /dev/nbd0
     mount /dev/nbd0 /mnt
+
+Please check --help for further details.
 
 
 License
