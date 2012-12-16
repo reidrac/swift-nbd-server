@@ -43,7 +43,7 @@ class Main(object):
                                 epilog="Contact and support: %s" % project_url
                                 )
 
-        parser.add_argument("container", help="container used as storage (setup it first)")
+        parser.add_argument("container", help="container used as storage (set it up first)")
 
         parser.add_argument("--version", action="version", version="%(prog)s "  + version)
 
