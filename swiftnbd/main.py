@@ -23,13 +23,12 @@ THE SOFTWARE.
 """
 
 from argparse import ArgumentParser
-import struct
 
 from swiftclient import client
-from gevent.server import StreamServer
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file
 from swiftnbd.common import setLog, getMeta, getSecrets, SwiftBlockFile
+from swiftnbd.server import Server
 
 class Main(object):
     def __init__(self):
@@ -109,10 +108,9 @@ class Main(object):
                 self.log.error("%s doesn't appear to be correct: %s" % (self.args.container, ex))
                 return 1
 
-            self.export_size = self.block_size * self.blocks
-
+        store = SwiftBlockFile(self.args.authurl, self.username, self.password, self.args.container, self.block_size, self.blocks)
         addr = (self.args.bind_address, self.args.bind_port)
-        server = StreamServer(addr, self.handle_request)
+        server = Server(addr, store)
 
         self.log.info("Starting server on %s:%s" % addr)
         try:
@@ -122,85 +120,4 @@ class Main(object):
 
         self.log.info("Exiting...")
         return 0
-
-    NBD_CMD_READ = 0
-    NBD_CMD_WRITE = 1
-    NBD_CMD_DISC = 2
-    NBD_CMD_FLUSH = 3
-
-    def nbd_response(self, fo, handle, error=0, data=None):
-        fo.write("\x67\x44\x66\x98" + struct.pack('>L', error) + struct.pack(">Q", handle))
-        if data:
-            fo.write(data)
-        fo.flush()
-
-    def handle_request(self, socket, address):
-        host, port = address
-        self.log.info("Incoming connection from %s:%s" % address)
-
-        store = SwiftBlockFile(self.args.authurl, self.username, self.password, self.args.container, self.block_size, self.blocks)
-        fo = socket.makefile()
-
-        # initial handshake (old-style)
-        fo.write("NBDMAGIC\x00\x00\x42\x02\x81\x86\x12\x53" + struct.pack('>Q', self.export_size) + "\0"*128)
-        fo.flush()
-
-        while True:
-            header = fo.read(28)
-            (magic, cmd, handle, offset, length) = struct.unpack(">LLQQL", header)
-
-            if magic != 0x25609513:
-                self.log.error("[%s:%s]: Wrong magic number, disconnecting" % address)
-                socket.close()
-                return
-
-            self.log.debug("[%s:%s]: cmd=%s, handle=%s, offset=%s, len=%s" % (host, port, cmd, handle, offset, length))
-
-            if cmd == self.NBD_CMD_DISC:
-
-                self.log.info("[%s:%s]: disconnecting" % address)
-                socket.close()
-                return
-
-            elif cmd == self.NBD_CMD_WRITE:
-
-                data = fo.read(length)
-                if(len(data) != length):
-                    self.log.error("[%s:%s]: %s bytes expected, disconnecting" % (host, port, length))
-                    socket.close()
-                    return
-
-                try:
-                    store.seek(offset)
-                    store.write(data)
-                except IOError as ex:
-                    self.log.error("[%s:%s]: %s" % (host, port, ex))
-                    self.nbd_response(fo, handle, error=ex.errno)
-                    return
-
-                self.nbd_response(fo, handle)
-
-            elif cmd == self.NBD_CMD_READ:
-
-                try:
-                    store.seek(offset)
-                    data = store.read(length)
-                except IOError as ex:
-                    self.log.error("[%s:%s]: %s" % (host, port, ex))
-                    self.nbd_response(fo, handle, error=ex.errno)
-                    return
-
-                self.nbd_response(fo, handle, data=data)
-
-            elif cmd == self.NBD_CMD_FLUSH:
-
-                store.flush()
-
-                self.nbd_response(fo, handle)
-
-            else:
-
-                self.log.warning("[%s:%s]: Unknown cmd %s, disconnecting" % (host, port, cmd))
-                socket.close()
-                return
 

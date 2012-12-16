@@ -89,7 +89,7 @@ class SwiftBlockFile(object):
     def __init__(self, authurl, username, password, container, block_size, blocks):
         self.container = container
         self.block_size = block_size
-        self.size = block_size * blocks
+        self.blocks = blocks
         self.pos = 0
 
         self.cli = client.Connection(authurl, username, password)
@@ -153,6 +153,10 @@ class SwiftBlockFile(object):
     def block_num(self):
         # block number based on the position
         return self.pos / self.block_size
+
+    @property
+    def size(self):
+        return self.block_size * self.blocks
 
     def flush(self):
         self.cache = dict()
