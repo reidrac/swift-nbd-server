@@ -33,7 +33,6 @@ from swiftclient import client
 
 def getSecrets(container, secrets_file):
     """Read secrets"""
-
     stat = os.stat(secrets_file)
     if stat.st_mode & 0x004 != 0:
         log = logging.getLogger(__package__)
@@ -49,7 +48,6 @@ def getSecrets(container, secrets_file):
 
 def setLog(debug=False):
     """Setup logger"""
-
     log = logging.getLogger(__package__)
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter('%(asctime)s: %(name)s: %(levelname)s: %(message)s'))
