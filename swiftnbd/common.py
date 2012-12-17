@@ -25,6 +25,7 @@ THE SOFTWARE.
 import logging
 import errno
 import os
+from time import time
 from cStringIO import StringIO
 from hashlib import md5
 from ConfigParser import RawConfigParser
@@ -89,17 +90,54 @@ class SwiftBlockFile(object):
         self.block_size = block_size
         self.blocks = blocks
         self.pos = 0
+        self.locked = False
+        self.meta = dict()
 
         self.cli = client.Connection(authurl, username, password)
 
-        # force authentication
+    def __str__(self):
+        return self.container
+
+    def lock(self, client_id):
+        """Set the storage as busy"""
+        if self.locked:
+            return
+
         try:
-            self.cli.get_container(container)
+            headers, _ = self.cli.get_container(self.container)
         except client.ClientException as ex:
             raise IOError(errno.EACCES, "Storage error: %s" % ex.http_status)
 
-    def read(self, size):
+        self.meta = getMeta(headers)
 
+        if self.meta.get('client'):
+            raise IOError(errno.EBUSY, "Storage already in use: %s" % self.meta['client'])
+
+        self.meta['client'] = "%s@%i" % (client_id, time())
+        hdrs = setMeta(self.meta)
+        try:
+            self.cli.put_container(self.container, headers=hdrs)
+        except client.ClientException as ex:
+            raise IOError(errno.EIO, "Failed to lock: %s" % ex.http_status)
+
+        self.locked = True
+
+    def unlock(self):
+        """Set the storage as free"""
+        if not self.locked:
+            return
+
+        self.meta['last'] = self.meta.get('client')
+        self.meta['client'] = ''
+        hdrs = setMeta(self.meta)
+        try:
+            self.cli.put_container(self.container, headers=hdrs)
+        except client.ClientException as ex:
+            raise IOError(errno.EIO, "Failed to unlock: %s" % ex.http_status)
+
+        self.locked = False
+
+    def read(self, size):
         data = ""
         while size > 0:
             block = self.fetch_block(self.block_num)
@@ -117,7 +155,6 @@ class SwiftBlockFile(object):
         return data
 
     def write(self, data):
-
         if self.block_pos != 0:
             # block-align the beginning of data
             block = self.fetch_block(self.block_num)
@@ -160,7 +197,6 @@ class SwiftBlockFile(object):
         self.cache = dict()
 
     def fetch_block(self, block_num):
-
         data = self.cache.get(block_num)
         if not data:
             block_name = "disk.part/%.8i" % block_num
@@ -175,7 +211,6 @@ class SwiftBlockFile(object):
         return data
 
     def put_block(self, block_num, data):
-
         block_name = "disk.part/%.8i" % block_num
         try:
             etag = self.cli.put_object(self.container, block_name, StringIO(data))

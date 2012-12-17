@@ -22,8 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import signal
 from argparse import ArgumentParser
 
+import gevent
 from swiftclient import client
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file
@@ -87,10 +89,9 @@ class Main(object):
         except client.ClientException as ex:
             if ex.http_status == 404:
                 self.log.error("%s doesn't exist" % self.args.container)
-                return 1
             else:
                 self.log.error(ex)
-                return 1
+            return 1
         else:
             self.log.debug(headers)
 
@@ -108,15 +109,26 @@ class Main(object):
                 self.log.error("%s doesn't appear to be correct: %s" % (self.args.container, ex))
                 return 1
 
-        store = SwiftBlockFile(self.args.authurl, self.username, self.password, self.args.container, self.block_size, self.blocks)
+        store = SwiftBlockFile(self.args.authurl,
+                               self.username,
+                               self.password,
+                               self.args.container,
+                               self.block_size,
+                               self.blocks
+                               )
         addr = (self.args.bind_address, self.args.bind_port)
         server = Server(addr, store)
+        gevent.signal(signal.SIGTERM, server.stop)
+        gevent.signal(signal.SIGINT, server.stop)
 
         self.log.info("Starting server on %s:%s" % addr)
-        try:
-            server.serve_forever()
-        except KeyboardInterrupt as ex:
-            self.log.warning("Interrupt received")
+
+        server.serve_forever()
+
+        # unlock the storage before exit
+        if server.store and server.store.locked:
+            self.log.debug("unlocking storage...")
+            server.store.unlock()
 
         self.log.info("Exiting...")
         return 0

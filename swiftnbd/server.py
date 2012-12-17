@@ -37,62 +37,71 @@ class Server(StreamServer):
     NBD_CMD_DISC = 2
     NBD_CMD_FLUSH = 3
 
-    def __init__(self, listener, store, *kargs, **kwargs):
-        super(Server, self).__init__(listener, *kargs, **kwargs)
+    def __init__(self, listener, store):
+        super(Server, self).__init__(listener)
 
         self.store = store
         self.log = logging.getLogger(__package__)
 
-    def nbd_response(self, fo, handle, error=0, data=None):
-        fo.write("\x67\x44\x66\x98" + struct.pack('>L', error) + struct.pack(">Q", handle))
+    def nbd_response(self, fob, handle, error=0, data=None):
+        fob.write("\x67\x44\x66\x98" + struct.pack('>L', error) + struct.pack(">Q", handle))
         if data:
-            fo.write(data)
-        fo.flush()
+            fob.write(data)
+        fob.flush()
 
     def handle(self, socket, address):
         host, port = address
         self.log.info("Incoming connection from %s:%s" % address)
 
-        fo = socket.makefile()
+        try:
+            self.store.lock("%s:%s" % address)
+        except IOError as ex:
+            self.log.error("[%s:%s]: %s" % (host, port, ex))
+            socket.close()
+            return
+
+        fob = socket.makefile()
 
         # initial handshake (old-style)
-        fo.write("NBDMAGIC\x00\x00\x42\x02\x81\x86\x12\x53" + struct.pack('>Q', self.store.size) + "\0"*128)
-        fo.flush()
+        fob.write("NBDMAGIC\x00\x00\x42\x02\x81\x86\x12\x53" + struct.pack('>Q', self.store.size) + "\x00"*128)
+        fob.flush()
 
         while True:
-            header = fo.read(28)
-            (magic, cmd, handle, offset, length) = struct.unpack(">LLQQL", header)
+            header = fob.read(28)
+            try:
+                (magic, cmd, handle, offset, length) = struct.unpack(">LLQQL", header)
+            except struct.error:
+                self.log.error("[%s:%s]: Invalid request, disconnecting" % address)
+                break
 
             if magic != 0x25609513:
                 self.log.error("[%s:%s]: Wrong magic number, disconnecting" % address)
                 socket.close()
-                return
+                break
 
             self.log.debug("[%s:%s]: cmd=%s, handle=%s, offset=%s, len=%s" % (host, port, cmd, handle, offset, length))
 
             if cmd == self.NBD_CMD_DISC:
 
                 self.log.info("[%s:%s]: disconnecting" % address)
-                socket.close()
-                return
+                break
 
             elif cmd == self.NBD_CMD_WRITE:
 
-                data = fo.read(length)
+                data = fob.read(length)
                 if(len(data) != length):
                     self.log.error("[%s:%s]: %s bytes expected, disconnecting" % (host, port, length))
-                    socket.close()
-                    return
+                    break
 
                 try:
                     self.store.seek(offset)
                     self.store.write(data)
                 except IOError as ex:
                     self.log.error("[%s:%s]: %s" % (host, port, ex))
-                    self.nbd_response(fo, handle, error=ex.errno)
-                    return
+                    self.nbd_response(fob, handle, error=ex.errno)
+                    continue
 
-                self.nbd_response(fo, handle)
+                self.nbd_response(fob, handle)
 
             elif cmd == self.NBD_CMD_READ:
 
@@ -101,20 +110,24 @@ class Server(StreamServer):
                     data = self.store.read(length)
                 except IOError as ex:
                     self.log.error("[%s:%s]: %s" % (host, port, ex))
-                    self.nbd_response(fo, handle, error=ex.errno)
-                    return
+                    self.nbd_response(fob, handle, error=ex.errno)
+                    continue
 
-                self.nbd_response(fo, handle, data=data)
+                self.nbd_response(fob, handle, data=data)
 
             elif cmd == self.NBD_CMD_FLUSH:
 
                 self.store.flush()
-
-                self.nbd_response(fo, handle)
+                self.nbd_response(fob, handle)
 
             else:
 
                 self.log.warning("[%s:%s]: Unknown cmd %s, disconnecting" % (host, port, cmd))
-                socket.close()
-                return
+                break
+
+        try:
+            self.store.unlock()
+        except IOError as ex:
+            self.log.error(ex)
+        socket.close()
 

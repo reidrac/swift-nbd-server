@@ -95,7 +95,7 @@ class Main(object):
 
             self.log.warning("%s has already been setup, forcing operation" % self.args.container)
 
-        hdrs = setMeta(dict(version=version, blocks=self.args.blocks, block_size=self.args.block_size))
+        hdrs = setMeta(dict(version=version, blocks=self.args.blocks, block_size=self.args.block_size, client='', last=''))
         self.log.debug("Meta headers: %s" % hdrs)
 
         try:
