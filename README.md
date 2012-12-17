@@ -19,7 +19,7 @@ Requirements:
 
  - python 2.7 (or later)
  - python-swiftclient
- - geventlet
+ - gevent
 
 To install the software, run the following command:
 
