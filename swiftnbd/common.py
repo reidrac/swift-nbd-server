@@ -23,6 +23,7 @@ THE SOFTWARE.
 """
 
 import logging
+from logging.handlers import SysLogHandler
 import errno
 import os
 from time import time
@@ -47,11 +48,21 @@ def getSecrets(container, secrets_file):
 
     return (conf.get(container, 'username'), conf.get(container, 'password'))
 
-def setLog(debug=False):
+def setLog(debug=False, use_syslog=False):
     """Setup logger"""
     log = logging.getLogger(__package__)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(asctime)s: %(name)s: %(levelname)s: %(message)s'))
+
+    if use_syslog:
+        try:
+            handler = SysLogHandler(address="/dev/log", facility='local0')
+        except IOError:
+            # fallback to UDP
+            handler = SysLogHandler(facility='local0')
+        handler.setFormatter(logging.Formatter('%(name)s[%(process)d]: %(levelname)s: %(message)s'))
+    else:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s: %(name)s: %(levelname)s: %(message)s'))
+
     log.addHandler(handler)
 
     if debug:

@@ -65,6 +65,11 @@ class Main(object):
                             default=10811,
                             help="bind address (default: 10811)")
 
+        parser.add_argument("--syslog", dest="syslog",
+                            action="store_true",
+                            help="log to system logger (local0)"
+                            )
+
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true",
                             help="enable verbose logging"
@@ -72,7 +77,7 @@ class Main(object):
 
         self.args = parser.parse_args()
 
-        self.log = setLog(debug=self.args.verbose)
+        self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog)
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
 
         try:
