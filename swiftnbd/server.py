@@ -32,6 +32,10 @@ class Server(StreamServer):
     Class implementing a StreamServer.
     """
 
+    # NBD's magic
+    NBD_HANDSHAKE = "NBDMAGIC\x00\x00\x42\x02\x81\x86\x12\x53"
+    NBD_RESPONSE = "\x67\x44\x66\x98"
+
     NBD_CMD_READ = 0
     NBD_CMD_WRITE = 1
     NBD_CMD_DISC = 2
@@ -44,7 +48,7 @@ class Server(StreamServer):
         self.log = logging.getLogger(__package__)
 
     def nbd_response(self, fob, handle, error=0, data=None):
-        fob.write("\x67\x44\x66\x98" + struct.pack('>L', error) + struct.pack(">Q", handle))
+        fob.write(self.NBD_RESPONSE + struct.pack('>L', error) + struct.pack(">Q", handle))
         if data:
             fob.write(data)
         fob.flush()
@@ -63,7 +67,7 @@ class Server(StreamServer):
         fob = socket.makefile()
 
         # initial handshake (old-style)
-        fob.write("NBDMAGIC\x00\x00\x42\x02\x81\x86\x12\x53" + struct.pack('>Q', self.store.size) + "\x00"*128)
+        fob.write(self.NBD_HANDSHAKE + struct.pack('>Q', self.store.size) + "\x00"*128)
         fob.flush()
 
         while True:
