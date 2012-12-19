@@ -22,7 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import os
+import sys
 import signal
+import tempfile
 from argparse import ArgumentParser
 
 import gevent
@@ -70,6 +73,17 @@ class Main(object):
                             help="log to system logger (local0)"
                             )
 
+        parser.add_argument("-f", "--foreground", dest="foreground",
+                            action="store_true",
+                            help="don't detach from terminal (foreground mode)"
+                            )
+
+        default_pidfile = os.path.join(tempfile.gettempdir(), "%s.pid" % __package__)
+        parser.add_argument("--pid-file", dest="pidfile",
+                            default=default_pidfile,
+                            help="filename to store the PID (default: %s)" % default_pidfile
+                            )
+
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true",
                             help="enable verbose logging"
@@ -86,6 +100,10 @@ class Main(object):
             parser.error(ex)
 
     def run(self):
+
+        if os.path.isfile(self.args.pidfile):
+            self.log.error("%s found: is the server already running?" % self.args.pidfile)
+            return 1
 
         cli = client.Connection(self.args.authurl, self.username, self.password)
 
@@ -123,12 +141,41 @@ class Main(object):
                                )
         addr = (self.args.bind_address, self.args.bind_port)
         server = Server(addr, store)
+
         gevent.signal(signal.SIGTERM, server.stop)
         gevent.signal(signal.SIGINT, server.stop)
 
-        self.log.info("Starting server on %s:%s" % addr)
+        if not self.args.foreground:
+            try:
+                if gevent.fork() != 0:
+                    os._exit(0)
+            except OSError as ex:
+                self.log.error("Failed to daemonize: %s" % ex)
+                return 1
 
-        server.serve_forever()
+            os.setsid()
+            fd = os.open(os.devnull, os.O_RDWR)
+            os.dup2(fd, sys.stdin.fileno())
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+
+            gevent.reinit()
+
+        self.log.info("Starting to serve %s on %s:%s" % (store, addr[0], addr[1]))
+
+        try:
+            fd = os.open(self.args.pidfile, (os.O_CREAT|os.O_EXCL|os.O_WRONLY), 0644)
+        except OSError as ex:
+            self.log.error("Failed to create the pidfile: %s" % ex)
+            return 1
+
+        with os.fdopen(fd, "w") as pidfile_handle:
+            pidfile_handle.write("%s\n" %os.getpid())
+            pidfile_handle.flush()
+
+            server.serve_forever()
+
+        os.remove(self.args.pidfile)
 
         # unlock the storage before exit
         if server.store and server.store.locked:
