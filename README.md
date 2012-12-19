@@ -46,14 +46,18 @@ For example, setup a 1GB storage in myndb0 container:
 
 Notes:
 
-    - by default the blocks stored in swift are 64KB, so 16384 * 65536 is 1GB
-	- swiftnbd-setup can be used to unlock a storage using the -f flag to overwrite the
-      container metadata (as long as the number-of-blocks is the same, it won't affect
-	  the stored data); this is only until we have a specific tool for that
+ - by default the blocks stored in swift are 64KB, so 16384 * 65536 is 1GB
+ - swiftnbd-setup can be used to unlock a storage using the -f flag to overwrite the
+   container metadata (as long as the number-of-blocks is the same, it won't affect
+   the stored data); this is only until we have a specific tool for that
 
 After the container is setup, it can be served with swiftnbdd:
 
     swiftnbdd container-name --secrets secrets.conf
+
+Notes:
+
+ - for debugging purposes, use -vf flag (verbose and foreground)
 
 Then you can use nbd-client to create the block device (as root):
 
