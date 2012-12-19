@@ -72,6 +72,16 @@ Now just use /dev/nbd0 as a regular block device, ie:
 Please check --help for further details.
 
 
+Known issues
+------------
+
+ - the storage block format is not definitive
+ - the cache is experimental and it never expires (and leaks memory!)
+ - the default 64KB storage block is a wild/random guess, other values could be better
+ - needs a tool to help manage the server (attach, detach, unlock, etc)
+ - more in the TODO list
+
+
 License
 -------
 
