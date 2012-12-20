@@ -172,3 +172,12 @@ class SwiftBlockFileTestCase(unittest.TestCase):
         self.store.seek(1024)
         self.assertEqual(self.store.tell(), 1024)
 
+    def test_read_end_of_disk(self):
+        self.store.seek(15*512)
+        data = self.store.read(1024)
+        self.assertEqual(len(data), 512)
+
+    def test_wite_end_of_disk(self):
+        self.store.seek(15*512)
+        self.assertRaises(IOError, self.store.write, 'X' * 1024)
+

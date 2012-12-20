@@ -150,40 +150,44 @@ class SwiftBlockFile(object):
 
     def read(self, size):
         data = ""
-        while size > 0:
+        _size = size
+        while _size > 0:
             block = self.fetch_block(self.block_num)
+            if block == '':
+                break
 
-            if size + self.block_pos >= self.block_size:
+            if _size + self.block_pos >= self.block_size:
                 data += block[self.block_pos:]
                 part_size = self.block_size - self.block_pos
             else:
-                data += block[self.block_pos:self.block_pos+size]
-                part_size = size
+                data += block[self.block_pos:self.block_pos+_size]
+                part_size = _size
 
-            size -= part_size
+            _size -= part_size
             self.seek(self.pos + part_size)
 
         return data
 
     def write(self, data):
+        _data = data[:]
         if self.block_pos != 0:
             # block-align the beginning of data
             block = self.fetch_block(self.block_num)
-            data = block[:self.block_pos] + data
+            _data = block[:self.block_pos] + _data
             self.seek(self.pos - self.block_pos)
 
-        reminder = len(data) % self.block_size
+        reminder = len(_data) % self.block_size
         if reminder != 0:
             # block-align the end of data
-            block = self.fetch_block(self.block_num + (len(data) / self.block_size))
-            data += block[reminder:]
+            block = self.fetch_block(self.block_num + (len(_data) / self.block_size))
+            _data += block[reminder:]
 
-        assert len(data) % self.block_size == 0, "Data not aligned!"
+        assert len(_data) % self.block_size == 0, "Data not aligned!"
 
         offs = 0
         block_num = self.block_num
-        while offs < len(data):
-            self.put_block(block_num, data[offs:offs+self.block_size])
+        while offs < len(_data):
+            self.put_block(block_num, _data[offs:offs+self.block_size])
             offs += self.block_size
             block_num += 1
 
@@ -208,6 +212,9 @@ class SwiftBlockFile(object):
         self.cache = dict()
 
     def fetch_block(self, block_num):
+        if block_num >= self.blocks:
+            return ''
+
         data = self.cache.get(block_num)
         if not data:
             block_name = "disk.part/%.8i" % block_num
@@ -222,6 +229,9 @@ class SwiftBlockFile(object):
         return data
 
     def put_block(self, block_num, data):
+        if block_num >= self.blocks:
+            raise IOError(errno.ESPIPE, "Write offset out of bounds")
+
         block_name = "disk.part/%.8i" % block_num
         try:
             etag = self.cli.put_object(self.container, block_name, StringIO(data))
