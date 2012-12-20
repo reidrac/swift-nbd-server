@@ -170,7 +170,7 @@ class Main(object):
             return 1
 
         with os.fdopen(fd, "w") as pidfile_handle:
-            pidfile_handle.write("%s\n" %os.getpid())
+            pidfile_handle.write("%s\n" % os.getpid())
             pidfile_handle.flush()
 
             server.serve_forever()
