@@ -9,14 +9,13 @@ References:
  - https://github.com/yoe/nbd/blob/master/doc/proto.txt
  - http://lists.canonical.org/pipermail/kragen-hacks/2004-May/000397.html
 
-**Warning**: this is a work in progress and in current state is alpha quality.
-
 
 Install
 -------
 
 Requirements:
 
+ - Linux (or any platform with NBD client)
  - python 2.7 (or later)
  - python-swiftclient
  - gevent
