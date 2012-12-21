@@ -28,6 +28,7 @@ import errno
 import os
 from time import time
 from cStringIO import StringIO
+from collections import Counter
 from hashlib import md5
 from ConfigParser import RawConfigParser
 
@@ -88,21 +89,73 @@ def getMeta(hdrs):
             return dict()
     return data
 
+class Cache(object):
+    """
+    Cache manager.
+
+    This is an in-memory cache manager that stores up to 'limit' items (blocks),
+    releasing the least frequently used when the limit is reached.
+    """
+    def __init__(self, limit):
+
+        self.limit = limit
+        self.ref = Counter()
+        self.data = dict()
+
+        self.log = logging.getLogger(__package__)
+        self.log.debug("cache size: %s" % self.limit)
+
+    def get(self, block_name, default=None):
+        """Get an element from the cache"""
+        if self.ref[block_name] > 0:
+            self.ref[block_name] += 1
+
+            self.log.debug("cache get hit: %s, %s" % (block_name, self.ref[block_name]))
+            return self.data[block_name]
+
+        self.log.debug("cache get miss: %s, %s" % (block_name, self.ref[block_name]))
+        return default
+
+    def set(self, block_name, data):
+        """Put/update an element in the cache"""
+        self.data[block_name] = data
+        self.ref[block_name] += 1
+
+        self.log.debug("cache set: %s, %s" % (block_name, self.ref[block_name]))
+
+        if len(self.data) > self.limit:
+            self.log.debug("cache size is over limit (%s > %s)" % (len(self.data), self.limit))
+            less_used = self.ref.most_common()[:-3:-1]
+            for key, freq in less_used:
+                if block_name != key:
+                    self.log.debug("cache free: %s, %s" % (key, self.ref[key]))
+                    del self.ref[key]
+                    del self.data[key]
+                    break
+
+    def flush(self):
+        """Flush the cache"""
+        self.log.debug("cache flush, was (%s): %s" % (len(self.data), self.ref))
+        self.ref = Counter()
+        self.data = dict()
+
 class SwiftBlockFile(object):
     """
     Manages a block-split file stored in OpenStack Object Storage (swift).
 
     May raise IOError.
     """
-    cache = dict()
+    cache = None
 
-    def __init__(self, authurl, username, password, container, block_size, blocks):
+    def __init__(self, authurl, username, password, container, block_size, blocks, cache=None):
         self.container = container
         self.block_size = block_size
         self.blocks = blocks
         self.pos = 0
         self.locked = False
         self.meta = dict()
+
+        self.cache = cache or Cache(int(1024**2 / self.block_size))
 
         self.cli = client.Connection(authurl, username, password)
 
@@ -209,7 +262,7 @@ class SwiftBlockFile(object):
         return self.block_size * self.blocks
 
     def flush(self):
-        self.cache = dict()
+        self.cache.flush()
 
     def block_name(self, block_num):
         return "disk.part/%.8i" % block_num
@@ -228,7 +281,7 @@ class SwiftBlockFile(object):
                     raise IOError(errno.EIO, "Storage error: %s" % ex)
                 return '\0' * self.block_size
 
-            self.cache[block_num] = data
+            self.cache.set(block_num, data)
         return data
 
     def put_block(self, block_num, data):
@@ -246,7 +299,7 @@ class SwiftBlockFile(object):
         if etag != checksum:
             raise IOError(errno.EAGAIN, "Block integrity error (block_num=%s)" % block_num)
 
-        self.cache[block_num] = data
+        self.cache.set(block_num, data)
 
     def seek(self, offset):
         if offset < 0 or offset > self.size:

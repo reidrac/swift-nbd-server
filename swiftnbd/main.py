@@ -32,7 +32,7 @@ import gevent
 from swiftclient import client
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
-from swiftnbd.common import setLog, getMeta, getSecrets, SwiftBlockFile
+from swiftnbd.common import setLog, getMeta, getSecrets, SwiftBlockFile, Cache
 from swiftnbd.server import Server
 
 class Main(object):
@@ -68,6 +68,11 @@ class Main(object):
                             default=10811,
                             help="bind address (default: 10811)")
 
+        parser.add_argument("-c", "--cache-limit", dest="cache_limit",
+                            type=int,
+                            default=64,
+                            help="cache memory limit in MB (default: 64)")
+
         parser.add_argument("--syslog", dest="syslog",
                             action="store_true",
                             help="log to system logger (local0)"
@@ -90,6 +95,9 @@ class Main(object):
                             )
 
         self.args = parser.parse_args()
+
+        if self.args.cache_limit < 1:
+            parser.error("Cache limit can't be less than 1MB")
 
         self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog)
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
@@ -140,7 +148,8 @@ class Main(object):
                                self.password,
                                self.args.container,
                                self.block_size,
-                               self.blocks
+                               self.blocks,
+                               Cache(int(self.args.cache_limit*1024**2 / self.block_size)),
                                )
         addr = (self.args.bind_address, self.args.bind_port)
         server = Server(addr, store)

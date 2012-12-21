@@ -181,3 +181,62 @@ class SwiftBlockFileTestCase(unittest.TestCase):
         self.store.seek(15*512)
         self.assertRaises(IOError, self.store.write, 'X' * 1024)
 
+class CacheTestCase(unittest.TestCase):
+    """Test the block-split file class."""
+    def setUp(self):
+        from swiftnbd.common import Cache
+        self.cache = Cache(10)
+
+    def tearDown(self):
+        pass
+
+    def test_get_miss(self):
+        data = self.cache.get(1)
+        self.assertEqual(self.cache.ref[1], 0)
+        self.assertEqual(data, None)
+
+    def test_get_hit(self):
+        self.cache.set(1, "DATA1")
+        self.cache.set(2, "DATA2")
+
+        data = self.cache.get(1)
+        self.assertEqual(data, "DATA1")
+        # set + get = 2 refferences
+        self.assertEqual(self.cache.ref[1], 2)
+
+        data = self.cache.get(2)
+        self.assertEqual(data, "DATA2")
+
+    def test_set(self):
+        self.cache.set(1, "1")
+        self.assertEqual(self.cache.ref[1], 1)
+        self.cache.set(1, "1")
+        self.assertEqual(self.cache.ref[1], 2)
+
+    def test_limit(self):
+        for i in range(10):
+            self.cache.set(i, "DATA%s" % i)
+
+        self.assertEqual(len(self.cache.data), 10)
+
+        for i in range(10):
+            self.assertEqual(self.cache.ref[i], 1)
+
+        for i in range(10):
+            for j in range(i+1):
+                self.cache.get(i)
+
+        # 0 should be discarded
+        self.cache.set(10, "DATA11")
+
+        self.assertEqual(len(self.cache.data), 10)
+        self.assertEqual(self.cache.ref[0], 0)
+        self.assertTrue(0 not in self.cache.data)
+
+        # 10 should be discarded
+        self.cache.set(11, "DATA12")
+
+        self.assertEqual(len(self.cache.data), 10)
+        self.assertEqual(self.cache.ref[10], 0)
+        self.assertTrue(10 not in self.cache.data)
+
