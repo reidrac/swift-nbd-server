@@ -16,7 +16,7 @@ Install
 Requirements:
 
  - Linux (or any platform with NBD client)
- - python 2.7 (or later)
+ - Python 2.7 (or later; Python 3 not supported)
  - python-swiftclient
  - gevent
 
