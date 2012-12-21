@@ -76,7 +76,7 @@ Before stopping the server, be sure you unmount the device and stop the nbd clie
 Please check --help for further details.
 
 
-Known issues and Limitations
+Known issues and limitations
 ----------------------------
 
  - The storage block format is not definitive.
