@@ -38,7 +38,7 @@ def getSecrets(container, secrets_file):
     stat = os.stat(secrets_file)
     if stat.st_mode & 0x004 != 0:
         log = logging.getLogger(__package__)
-        log.warn("%s is world readable, please consider changing its permissions to 0600" % secrets_file)
+        log.warning("%s is world readable, please consider changing its permissions to 0600" % secrets_file)
 
     conf = RawConfigParser(dict(username=None, password=None))
     conf.read(secrets_file)
