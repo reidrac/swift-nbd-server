@@ -31,7 +31,7 @@ from argparse import ArgumentParser
 import gevent
 from swiftclient import client
 
-from swiftnbd.const import version, description, project_url, auth_url, secrets_file
+from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
 from swiftnbd.common import setLog, getMeta, getSecrets, SwiftBlockFile
 from swiftnbd.server import Server
 
@@ -131,6 +131,9 @@ class Main(object):
             except ValueError as ex:
                 self.log.error("%s doesn't appear to be correct: %s" % (self.args.container, ex))
                 return 1
+
+            if self.meta['version'] != disk_version:
+                self.log.warning("Version mismatch %s != %s" % (self.meta['version'], disk_version))
 
         store = SwiftBlockFile(self.args.authurl,
                                self.username,

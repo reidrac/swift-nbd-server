@@ -26,7 +26,7 @@ from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbd.const import version, project_url, auth_url, block_size, secrets_file
+from swiftnbd.const import version, project_url, auth_url, block_size, secrets_file, disk_version
 from swiftnbd.common import setLog, setMeta, getMeta, getSecrets
 
 class Main(object):
@@ -95,7 +95,7 @@ class Main(object):
 
             self.log.warning("%s has already been setup, forcing operation" % self.args.container)
 
-        hdrs = setMeta(dict(version=version, blocks=self.args.blocks, block_size=self.args.block_size, client='', last=''))
+        hdrs = setMeta(dict(version=disk_version, blocks=self.args.blocks, block_size=self.args.block_size, client='', last=''))
         self.log.debug("Meta headers: %s" % hdrs)
 
         try:

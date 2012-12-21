@@ -35,3 +35,6 @@ block_size = 1024*64
 # user/password information for each container
 secrets_file = "/etc/swiftnbd/secrets.conf"
 
+# for disk format versioning
+disk_version = "1"
+
