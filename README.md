@@ -76,10 +76,22 @@ Known issues
 ------------
 
  - the storage block format is not definitive
- - the cache is experimental and it never expires (and leaks memory!)
  - the default 64KB storage block is a wild/random guess, other values could be better
  - needs a tool to help manage the server (attach, detach, unlock, etc)
  - more in the TODO list
+
+
+Limitations
+-----------
+
+ - the storage can't be mounted in more than one client at once, there's no global lock
+   management
+ - NDB doesn't provide secure access so it's better to run the server locally and
+   connect with the standard NBD client to localhost. OpenStack storage can (and should)
+   be accessed over a SSL connection
+ - it can be used over the Internet but the performance is dependant on the bandwidth, so
+   is recommended that the storage is accessible via LAN (or same datacenter with 100mbps
+   or better)
 
 
 License
