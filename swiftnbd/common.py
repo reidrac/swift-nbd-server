@@ -211,13 +211,16 @@ class SwiftBlockFile(object):
     def flush(self):
         self.cache = dict()
 
+    def block_name(self, block_num):
+        return "disk.part/%.8i" % block_num
+
     def fetch_block(self, block_num):
         if block_num >= self.blocks:
             return ''
 
         data = self.cache.get(block_num)
         if not data:
-            block_name = "disk.part/%.8i" % block_num
+            block_name = self.block_name(block_num)
             try:
                 _, data = self.cli.get_object(self.container, block_name)
             except client.ClientException as ex:
@@ -232,7 +235,7 @@ class SwiftBlockFile(object):
         if block_num >= self.blocks:
             raise IOError(errno.ESPIPE, "Write offset out of bounds")
 
-        block_name = "disk.part/%.8i" % block_num
+        block_name = self.block_name(block_num)
         try:
             etag = self.cli.put_object(self.container, block_name, StringIO(data))
         except client.ClientException as ex:
