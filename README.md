@@ -16,7 +16,7 @@ Install
 Requirements:
 
  - Linux (or any platform with NBD client)
- - Python 2.7 (or later; Python 3 not supported)
+ - Python 2.7 (or later; Python 3 not supported yet)
  - python-swiftclient
  - gevent
 
@@ -82,7 +82,7 @@ Known issues and limitations
  - The default 64KB storage block is a wild/random guess, other values could be better.
  - The storage can't be mounted in more than one client at once, there's no global lock
    management.
- - NDB doesn't provide secure access so it's better to run the server locally and
+ - NBD doesn't provide secure access so it's better to run the server locally and
    connect with the standard NBD client to localhost. OpenStack storage can (and should)
    be accessed over a SSL connection.
  - It can be used over the Internet but the performance is dependant on the bandwidth, so
