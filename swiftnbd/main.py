@@ -73,6 +73,11 @@ class Main(object):
                             default=64,
                             help="cache memory limit in MB (default: 64)")
 
+        parser.add_argument("-l", "--log-file", dest="log_file",
+                            default=None,
+                            help="log into the provided file"
+                            )
+
         parser.add_argument("--syslog", dest="syslog",
                             action="store_true",
                             help="log to system logger (local0)"
@@ -99,7 +104,7 @@ class Main(object):
         if self.args.cache_limit < 1:
             parser.error("Cache limit can't be less than 1MB")
 
-        self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog)
+        self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog, use_file=self.args.log_file)
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
 
         try:

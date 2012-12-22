@@ -49,7 +49,7 @@ def getSecrets(container, secrets_file):
 
     return (conf.get(container, 'username'), conf.get(container, 'password'))
 
-def setLog(debug=False, use_syslog=False):
+def setLog(debug=False, use_syslog=False, use_file=None):
     """Setup logger"""
     log = logging.getLogger(__package__)
 
@@ -61,7 +61,10 @@ def setLog(debug=False, use_syslog=False):
             handler = SysLogHandler(facility='local0')
         handler.setFormatter(logging.Formatter('%(name)s[%(process)d]: %(levelname)s: %(message)s'))
     else:
-        handler = logging.StreamHandler()
+        if use_file:
+            handler = logging.FileHandler(use_file)
+        else:
+            handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter('%(asctime)s: %(name)s: %(levelname)s: %(message)s'))
 
     log.addHandler(handler)
