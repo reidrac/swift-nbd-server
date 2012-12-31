@@ -23,7 +23,7 @@ setup(name="swiftnbd",
       scripts=["bin/swiftnbdd", "bin/swiftnbd-setup"],
       packages=find_packages(exclude=["tests"]),
       classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Programming Language :: Python",
         "Operating System :: OS Independent",
