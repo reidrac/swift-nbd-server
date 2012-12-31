@@ -20,10 +20,10 @@ to not be significant.
 
 References:
 
- - OpenStack Object Storage: http://www.openstack.org/software/openstack-storage/
- - NBD: http://nbd.sourceforge.net/
- - NBD protocol: https://github.com/yoe/nbd/blob/master/doc/proto.txt
- - NBD server example in Python: http://lists.canonical.org/pipermail/kragen-hacks/2004-May/000397.html
+- OpenStack Object Storage: http://www.openstack.org/software/openstack-storage/
+- NBD: http://nbd.sourceforge.net/
+- NBD protocol: https://github.com/yoe/nbd/blob/master/doc/proto.txt
+- NBD server example in Python: http://lists.canonical.org/pipermail/kragen-hacks/2004-May/000397.html
 
 
 Install
@@ -31,10 +31,10 @@ Install
 
 Requirements:
 
- - Linux (or any platform with NBD client)
- - Python 2.7 (or later; Python 3 not supported yet)
- - python-swiftclient
- - gevent
+- Linux (or any platform with NBD client)
+- Python 2.7 (or later; Python 3 not supported yet)
+- python-swiftclient
+- gevent
 
 To install the software, run the following command:
 
@@ -65,10 +65,10 @@ For example, setup a 1GB storage in myndb0 container:
 
 Notes:
 
- - by default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB
- - swiftnbd-setup can be used to unlock a storage using the -f flag to overwrite the
-   container metadata (as long as the number-of-objects is the same, it won't affect
-   the stored data); this is only until we have a specific tool for that
+- by default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB
+- swiftnbd-setup can be used to unlock a storage using the -f flag to overwrite the
+  container metadata (as long as the number-of-objects is the same, it won't affect
+  the stored data); this is only until we have a specific tool for that
 
 After the container is setup, it can be served with swiftnbdd:
 
@@ -76,7 +76,7 @@ After the container is setup, it can be served with swiftnbdd:
 
 Notes:
 
- - for debugging purposes, use -vf flag (verbose and foreground)
+- for debugging purposes, use -vf flag (verbose and foreground)
 
 Then you can use nbd-client to create the block device (as root):
 
@@ -99,12 +99,12 @@ Please check --help for further details.
 Known issues and limitations
 ----------------------------
 
- - The default 64KB storage block is a wild/random guess, other values could be better.
- - The storage can't be mounted in more than one client at once (there's a lock mechanism
-   for that).
- - It can be used over the Internet but the performance is dependant on the bandwidth, so
-   it's recommended that the storage is accessible via LAN (or same data center with 100mbps
-   or better).
+- The default 64KB storage block is a wild/random guess, other values could be better.
+- The storage can't be mounted in more than one client at once (there's a lock mechanism
+  for that).
+- It can be used over the Internet but the performance is dependant on the bandwidth, so
+  it's recommended that the storage is accessible via LAN (or same data center with 100mbps
+  or better).
 
 
 License
@@ -127,5 +127,5 @@ There you can file bug reports, ask for help or contribute patches.
 Author
 ------
 
- - Juan J. Martinez <jjm@usebox.net>
+- Juan J. Martinez <jjm@usebox.net>
 
