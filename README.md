@@ -3,11 +3,27 @@ Swift NBD Server
 
 This is a Network Block Device (NBD) server for OpenStack Object Storage (Swift).
 
+Very often users want to run tools like rsync on top of Swift, but this is not
+possible because the object storage HTTP API can't provide a file system alike
+functionality. This project aims to support a block interface for the object
+storage via NBD. 
+
+*swiftnbd* translates the NBD requests (read/write with offset and length) to Swift object
+operations, as displayed in the following picture:
+
+![block to object translation](https://github.com/reidrac/swift-nbd-server/raw/master/block2object.png)
+
+Although this strategy may work with any block interface, NBD was chosen because of its simplicity.
+The NBD server can serve the blocks over the network, but I recommend it's used locally. Because the
+communication with Swift will be the bottleneck, I expect the possible overhead of NBD on localhost
+to not be significant.
+
 References:
 
- - http://nbd.sourceforge.net/
- - https://github.com/yoe/nbd/blob/master/doc/proto.txt
- - http://lists.canonical.org/pipermail/kragen-hacks/2004-May/000397.html
+ - OpenStack Object Storage: http://www.openstack.org/software/openstack-storage/
+ - NBD: http://nbd.sourceforge.net/
+ - NBD protocol: https://github.com/yoe/nbd/blob/master/doc/proto.txt
+ - NBD server example in Python: http://lists.canonical.org/pipermail/kragen-hacks/2004-May/000397.html
 
 
 Install
@@ -24,6 +40,10 @@ To install the software, run the following command:
 
     python setup.py install
 
+Alternatively you can install it with pip:
+
+    pip install swiftnbd
+
 
 Usage
 -----
@@ -37,7 +57,7 @@ a secrets.conf file:
 
 Then run the setup tool using the container name as first parameter:
 
-    swiftnbd-setup container-name number-of-blocks
+    swiftnbd-setup container-name number-of-objects
 
 For example, setup a 1GB storage in myndb0 container:
 
@@ -45,9 +65,9 @@ For example, setup a 1GB storage in myndb0 container:
 
 Notes:
 
- - by default the blocks stored in swift are 64KB, so 16384 * 65536 is 1GB
+ - by default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB
  - swiftnbd-setup can be used to unlock a storage using the -f flag to overwrite the
-   container metadata (as long as the number-of-blocks is the same, it won't affect
+   container metadata (as long as the number-of-objects is the same, it won't affect
    the stored data); this is only until we have a specific tool for that
 
 After the container is setup, it can be served with swiftnbdd:
@@ -70,6 +90,7 @@ Now just use /dev/nbd0 as a regular block device, ie:
 
 Before stopping the server, be sure you unmount the device and stop the nbd client:
 
+    umount /mnt
     nbd-client -d /dev/nbd0
 
 Please check --help for further details.
@@ -78,15 +99,11 @@ Please check --help for further details.
 Known issues and limitations
 ----------------------------
 
- - The storage block format is not definitive.
  - The default 64KB storage block is a wild/random guess, other values could be better.
- - The storage can't be mounted in more than one client at once, there's no global lock
-   management.
- - NBD doesn't provide secure access so it's better to run the server locally and
-   connect with the standard NBD client to localhost. OpenStack storage can (and should)
-   be accessed over a SSL connection.
+ - The storage can't be mounted in more than one client at once (there's a lock mechanism
+   for that).
  - It can be used over the Internet but the performance is dependant on the bandwidth, so
-   it's recommended that the storage is accessible via LAN (or same datacenter with 100mbps
+   it's recommended that the storage is accessible via LAN (or same data center with 100mbps
    or better).
 
 
