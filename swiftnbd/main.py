@@ -39,8 +39,8 @@ class Main(object):
     def __init__(self):
 
         self.meta = None
-        self.block_size = 0
-        self.blocks = 0
+        self.object_size = 0
+        self.objects = 0
         self.export_size = 0
 
         parser = ArgumentParser(description=description,
@@ -139,8 +139,8 @@ class Main(object):
             self.log.debug("Meta: %s" % self.meta)
 
             try:
-                self.block_size = int(self.meta['block-size'])
-                self.blocks = int(self.meta['blocks'])
+                self.object_size = int(self.meta['object-size'])
+                self.objects = int(self.meta['objects'])
             except ValueError as ex:
                 self.log.error("%s doesn't appear to be correct: %s" % (self.args.container, ex))
                 return 1
@@ -152,9 +152,9 @@ class Main(object):
                                self.username,
                                self.password,
                                self.args.container,
-                               self.block_size,
-                               self.blocks,
-                               Cache(int(self.args.cache_limit*1024**2 / self.block_size)),
+                               self.object_size,
+                               self.objects,
+                               Cache(int(self.args.cache_limit*1024**2 / self.object_size)),
                                )
         addr = (self.args.bind_address, self.args.bind_port)
         server = Server(addr, store)

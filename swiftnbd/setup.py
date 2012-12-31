@@ -26,7 +26,7 @@ from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbd.const import version, project_url, auth_url, block_size, secrets_file, disk_version
+from swiftnbd.const import version, project_url, auth_url, object_size, secrets_file, disk_version
 from swiftnbd.common import setLog, setMeta, getMeta, getSecrets
 
 class Main(object):
@@ -36,7 +36,7 @@ class Main(object):
                                 )
 
         parser.add_argument("container", help="container used as storage")
-        parser.add_argument("blocks", help="number of blocks")
+        parser.add_argument("objects", help="number of objects")
 
         parser.add_argument("--version", action="version", version="%(prog)s "  + version)
 
@@ -48,9 +48,9 @@ class Main(object):
                             default=auth_url,
                             help="authentication URL (default: %s)" % auth_url)
 
-        parser.add_argument("--block-size", dest="block_size",
-                            default=block_size,
-                            help="block size (default: %s)" % block_size)
+        parser.add_argument("--object-size", dest="object_size",
+                            default=object_size,
+                            help="object size (default: %s)" % object_size)
 
         parser.add_argument("-f", "--force", dest="force",
                             action="store_true",
@@ -95,7 +95,7 @@ class Main(object):
 
             self.log.warning("%s has already been setup, forcing operation" % self.args.container)
 
-        hdrs = setMeta(dict(version=disk_version, blocks=self.args.blocks, block_size=self.args.block_size, client='', last=''))
+        hdrs = setMeta(dict(version=disk_version, objects=self.args.objects, object_size=self.args.object_size, client='', last=''))
         self.log.debug("Meta headers: %s" % hdrs)
 
         try:

@@ -78,7 +78,7 @@ def setLog(debug=False, use_syslog=False, use_file=None):
     return log
 
 _META_PREFIX = "x-container-meta-swiftnbd-"
-_META_REQUIRED = ('version', 'blocks', 'block-size')
+_META_REQUIRED = ('version', 'objects', 'object-size')
 
 def setMeta(meta):
     """Convert a metada dict into swift meta headers"""
@@ -96,7 +96,7 @@ class Cache(object):
     """
     Cache manager.
 
-    This is an in-memory cache manager that stores up to 'limit' items (blocks),
+    This is an in-memory cache manager that stores up to 'limit' items (objects),
     releasing the least frequently used when the limit is reached.
     """
     def __init__(self, limit):
@@ -108,29 +108,29 @@ class Cache(object):
         self.log = logging.getLogger(__package__)
         self.log.debug("cache size: %s" % self.limit)
 
-    def get(self, block_name, default=None):
+    def get(self, object_name, default=None):
         """Get an element from the cache"""
-        if self.ref[block_name] > 0:
-            self.ref[block_name] += 1
+        if self.ref[object_name] > 0:
+            self.ref[object_name] += 1
 
-            self.log.debug("cache get hit: %s, %s" % (block_name, self.ref[block_name]))
-            return self.data[block_name]
+            self.log.debug("cache get hit: %s, %s" % (object_name, self.ref[object_name]))
+            return self.data[object_name]
 
-        self.log.debug("cache get miss: %s, %s" % (block_name, self.ref[block_name]))
+        self.log.debug("cache get miss: %s, %s" % (object_name, self.ref[object_name]))
         return default
 
-    def set(self, block_name, data):
+    def set(self, object_name, data):
         """Put/update an element in the cache"""
-        self.data[block_name] = data
-        self.ref[block_name] += 1
+        self.data[object_name] = data
+        self.ref[object_name] += 1
 
-        self.log.debug("cache set: %s, %s" % (block_name, self.ref[block_name]))
+        self.log.debug("cache set: %s, %s" % (object_name, self.ref[object_name]))
 
         if len(self.data) > self.limit:
             self.log.debug("cache size is over limit (%s > %s)" % (len(self.data), self.limit))
             less_used = self.ref.most_common()[:-3:-1]
             for key, freq in less_used:
-                if block_name != key:
+                if object_name != key:
                     self.log.debug("cache free: %s, %s" % (key, self.ref[key]))
                     del self.ref[key]
                     del self.data[key]
@@ -144,21 +144,21 @@ class Cache(object):
 
 class SwiftBlockFile(object):
     """
-    Manages a block-split file stored in OpenStack Object Storage (swift).
+    Manages a object-split file stored in OpenStack Object Storage (swift).
 
     May raise IOError.
     """
     cache = None
 
-    def __init__(self, authurl, username, password, container, block_size, blocks, cache=None):
+    def __init__(self, authurl, username, password, container, object_size, objects, cache=None):
         self.container = container
-        self.block_size = block_size
-        self.blocks = blocks
+        self.object_size = object_size
+        self.objects = objects
         self.pos = 0
         self.locked = False
         self.meta = dict()
 
-        self.cache = cache or Cache(int(1024**2 / self.block_size))
+        self.cache = cache or Cache(int(1024**2 / self.object_size))
 
         self.cli = client.Connection(authurl, username, password)
 
@@ -208,15 +208,15 @@ class SwiftBlockFile(object):
         data = ""
         _size = size
         while _size > 0:
-            block = self.fetch_block(self.block_num)
-            if block == '':
+            obj = self.fetch_object(self.object_num)
+            if obj == '':
                 break
 
-            if _size + self.block_pos >= self.block_size:
-                data += block[self.block_pos:]
-                part_size = self.block_size - self.block_pos
+            if _size + self.object_pos >= self.object_size:
+                data += obj[self.object_pos:]
+                part_size = self.object_size - self.object_pos
             else:
-                data += block[self.block_pos:self.block_pos+_size]
+                data += obj[self.object_pos:self.object_pos+_size]
                 part_size = _size
 
             _size -= part_size
@@ -226,83 +226,83 @@ class SwiftBlockFile(object):
 
     def write(self, data):
         _data = data[:]
-        if self.block_pos != 0:
-            # block-align the beginning of data
-            block = self.fetch_block(self.block_num)
-            _data = block[:self.block_pos] + _data
-            self.seek(self.pos - self.block_pos)
+        if self.object_pos != 0:
+            # object-align the beginning of data
+            obj = self.fetch_object(self.object_num)
+            _data = obj[:self.object_pos] + _data
+            self.seek(self.pos - self.object_pos)
 
-        reminder = len(_data) % self.block_size
+        reminder = len(_data) % self.object_size
         if reminder != 0:
-            # block-align the end of data
-            block = self.fetch_block(self.block_num + (len(_data) / self.block_size))
-            _data += block[reminder:]
+            # object-align the end of data
+            obj = self.fetch_object(self.object_num + (len(_data) / self.object_size))
+            _data += obj[reminder:]
 
-        assert len(_data) % self.block_size == 0, "Data not aligned!"
+        assert len(_data) % self.object_size == 0, "Data not aligned!"
 
         offs = 0
-        block_num = self.block_num
+        object_num = self.object_num
         while offs < len(_data):
-            self.put_block(block_num, _data[offs:offs+self.block_size])
-            offs += self.block_size
-            block_num += 1
+            self.put_object(object_num, _data[offs:offs+self.object_size])
+            offs += self.object_size
+            object_num += 1
 
     def tell(self):
         return self.pos
 
     @property
-    def block_pos(self):
-        # position in the block
-        return self.pos % self.block_size
+    def object_pos(self):
+        # position in the object
+        return self.pos % self.object_size
 
     @property
-    def block_num(self):
-        # block number based on the position
-        return self.pos / self.block_size
+    def object_num(self):
+        # object number based on the position
+        return self.pos / self.object_size
 
     @property
     def size(self):
-        return self.block_size * self.blocks
+        return self.object_size * self.objects
 
     def flush(self):
         self.cache.flush()
 
-    def block_name(self, block_num):
-        return "disk.part/%.8i" % block_num
+    def object_name(self, object_num):
+        return "disk.part/%.8i" % object_num
 
-    def fetch_block(self, block_num):
-        if block_num >= self.blocks:
+    def fetch_object(self, object_num):
+        if object_num >= self.objects:
             return ''
 
-        data = self.cache.get(block_num)
+        data = self.cache.get(object_num)
         if not data:
-            block_name = self.block_name(block_num)
+            object_name = self.object_name(object_num)
             try:
-                _, data = self.cli.get_object(self.container, block_name)
+                _, data = self.cli.get_object(self.container, object_name)
             except client.ClientException as ex:
                 if ex.http_status != 404:
                     raise IOError(errno.EIO, "Storage error: %s" % ex)
-                return '\0' * self.block_size
+                return '\0' * self.object_size
 
-            self.cache.set(block_num, data)
+            self.cache.set(object_num, data)
         return data
 
-    def put_block(self, block_num, data):
-        if block_num >= self.blocks:
+    def put_object(self, object_num, data):
+        if object_num >= self.objects:
             raise IOError(errno.ESPIPE, "Write offset out of bounds")
 
-        block_name = self.block_name(block_num)
+        object_name = self.object_name(object_num)
         try:
-            etag = self.cli.put_object(self.container, block_name, StringIO(data))
+            etag = self.cli.put_object(self.container, object_name, StringIO(data))
         except client.ClientException as ex:
             raise IOError("Storage error: %s" % ex, errno=errno.EIO)
 
         checksum = md5(data).hexdigest()
         etag = etag.lower()
         if etag != checksum:
-            raise IOError(errno.EAGAIN, "Block integrity error (block_num=%s)" % block_num)
+            raise IOError(errno.EAGAIN, "Block integrity error (object_num=%s)" % object_num)
 
-        self.cache.set(block_num, data)
+        self.cache.set(object_num, data)
 
     def seek(self, offset):
         if offset < 0 or offset > self.size:
