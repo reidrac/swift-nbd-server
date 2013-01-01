@@ -117,9 +117,7 @@ included in this package).
 Contact and support
 -------------------
 
-The project website is at:
-
-  https://github.com/reidrac/swift-nbd-server
+The project website is at: https://github.com/reidrac/swift-nbd-server
 
 There you can file bug reports, ask for help or contribute patches.
 
