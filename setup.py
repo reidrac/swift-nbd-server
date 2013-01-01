@@ -5,7 +5,7 @@ from swiftnbd.const import version, project_url, description
 
 def readme():
     try:
-        return open("README.md").read()
+        return open("README.rst").read()
     except:
         return ""
 
