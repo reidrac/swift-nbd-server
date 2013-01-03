@@ -24,7 +24,8 @@ THE SOFTWARE.
 
 import unittest
 
-from test_common import *
+from test_blockfile import *
+from test_cache import *
 
 if __name__ == '__main__':
         unittest.main()
