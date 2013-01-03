@@ -24,8 +24,6 @@ THE SOFTWARE.
 
 import sys
 
-from os.path import basename
-
 from swiftnbd.main import Main
 
 if __name__ == "__main__":
