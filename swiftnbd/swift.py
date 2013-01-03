@@ -48,7 +48,9 @@ class SwiftStorage(object):
         self.locked = False
         self.meta = dict()
 
-        self.cache = cache or Cache(int(1024**2 / self.object_size))
+        self.cache = cache
+        if self.cache is None:
+            self.cache = Cache(int(1024**2 / self.object_size))
 
         self.cli = client.Connection(authurl, username, password)
 
