@@ -25,6 +25,7 @@ THE SOFTWARE.
 import os
 import sys
 import signal
+import socket
 import tempfile
 from argparse import ArgumentParser
 
@@ -57,7 +58,7 @@ class Main(object):
 
         parser.add_argument("-a", "--auth-url", dest="authurl",
                             default=auth_url,
-                            help="authentication URL (default: %s)" % auth_url)
+                            help="default authentication URL (default: %s)" % auth_url)
 
         parser.add_argument("-b", "--bind-address", dest="bind_address",
                             default="127.0.0.1",
@@ -108,9 +109,12 @@ class Main(object):
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
 
         try:
-            self.username, self.password = getSecrets(self.args.container, self.args.secrets_file)
+            self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file)
         except ValueError as ex:
             parser.error(ex)
+
+        if self.authurl is None:
+            self.authurl = self.args.authurl
 
     def run(self):
 
@@ -118,12 +122,12 @@ class Main(object):
             self.log.error("%s found: is the server already running?" % self.args.pidfile)
             return 1
 
-        cli = client.Connection(self.args.authurl, self.username, self.password)
+        cli = client.Connection(self.authurl, self.username, self.password)
 
         try:
             headers, _ = cli.get_container(self.args.container)
-        except client.ClientException as ex:
-            if ex.http_status == 404:
+        except (socket.error, client.ClientException) as ex:
+            if getattr(ex, 'http_status', None) == 404:
                 self.log.error("%s doesn't exist" % self.args.container)
             else:
                 self.log.error(ex)

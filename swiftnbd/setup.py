@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import socket
 from argparse import ArgumentParser
 
 from swiftclient import client
@@ -46,7 +47,7 @@ class Main(object):
 
         parser.add_argument("-a", "--auth-url", dest="authurl",
                             default=auth_url,
-                            help="authentication URL (default: %s)" % auth_url)
+                            help="default authentication URL (default: %s)" % auth_url)
 
         parser.add_argument("--object-size", dest="object_size",
                             default=object_size,
@@ -67,18 +68,21 @@ class Main(object):
         self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
 
         try:
-            self.username, self.password = getSecrets(self.args.container, self.args.secrets_file)
+            self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file)
         except ValueError as ex:
             parser.error(ex)
 
+        if self.authurl is None:
+            self.authurl = self.args.authurl
+
     def run(self):
 
-        cli = client.Connection(self.args.authurl, self.username, self.password)
+        cli = client.Connection(self.authurl, self.username, self.password)
 
         try:
             headers, _ = cli.get_container(self.args.container)
-        except client.ClientException as ex:
-            if ex.http_status == 404:
+        except (socket.error, client.ClientException) as ex:
+            if getattr(ex, 'http_status', None) == 404:
                 self.log.debug("%s doesn't exist, will be created" % self.args.container)
             else:
                 self.log.error(ex)

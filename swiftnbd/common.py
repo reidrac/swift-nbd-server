@@ -41,13 +41,16 @@ def getSecrets(container, secrets_file):
         log = logging.getLogger(__package__)
         log.warning("%s is world readable, please consider changing its permissions to 0600" % secrets_file)
 
-    conf = RawConfigParser(dict(username=None, password=None))
+    conf = RawConfigParser(dict(username=None, password=None, authurl=None))
     conf.read(secrets_file)
 
     if not conf.has_section(container):
         raise ValueError("%s not found in %s" % (container, secrets_file))
 
-    return (conf.get(container, 'username'), conf.get(container, 'password'))
+    return (conf.get(container, 'username'),
+            conf.get(container, 'password'),
+            conf.get(container, 'authurl'),
+            )
 
 def setLog(debug=False, use_syslog=False, use_file=None):
     """Setup logger"""
