@@ -72,13 +72,13 @@ class SwiftBlockFileTestCase(unittest.TestCase):
     """Test the object-split file class."""
     def setUp(self):
         # monkey-patch swiftclient to use out mock up
-        import swiftnbd.common as common
-        common.client = MockConnection
-        from swiftnbd.common import SwiftBlockFile
+        import swiftnbd.swift as swift
+        swift.client = MockConnection
+        from swiftnbd.swift import SwiftStorage
 
         # create a disk doubling the actual size of the mock up so we
         # have some uninitialised space to run tests
-        self.store = SwiftBlockFile('url', 'user', 'pass', 'container', 512, 16)
+        self.store = SwiftStorage('url', 'user', 'pass', 'container', 512, 16)
         self.store.flush()
 
     def tearDown(self):

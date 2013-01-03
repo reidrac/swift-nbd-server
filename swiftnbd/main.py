@@ -33,7 +33,9 @@ import gevent
 from swiftclient import client
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
-from swiftnbd.common import setLog, getMeta, getSecrets, SwiftBlockFile, Cache
+from swiftnbd.common import setLog, getMeta, getSecrets
+from swiftnbd.cache import Cache
+from swiftnbd.swift import SwiftStorage
 from swiftnbd.server import Server
 
 class Main(object):
@@ -152,14 +154,14 @@ class Main(object):
             if self.meta['version'] != disk_version:
                 self.log.warning("Version mismatch %s != %s" % (self.meta['version'], disk_version))
 
-        store = SwiftBlockFile(self.args.authurl,
-                               self.username,
-                               self.password,
-                               self.args.container,
-                               self.object_size,
-                               self.objects,
-                               Cache(int(self.args.cache_limit*1024**2 / self.object_size)),
-                               )
+        store = SwiftStorage(self.args.authurl,
+                             self.username,
+                             self.password,
+                             self.args.container,
+                             self.object_size,
+                             self.objects,
+                             Cache(int(self.args.cache_limit*1024**2 / self.object_size)),
+                             )
         addr = (self.args.bind_address, self.args.bind_port)
         server = Server(addr, store)
 

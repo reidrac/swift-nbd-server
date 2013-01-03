@@ -27,7 +27,7 @@ import unittest
 class CacheTestCase(unittest.TestCase):
     """Test the object-split file class."""
     def setUp(self):
-        from swiftnbd.common import Cache
+        from swiftnbd.cache import Cache
         self.cache = Cache(10)
 
     def tearDown(self):
