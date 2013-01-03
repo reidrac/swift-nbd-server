@@ -48,6 +48,9 @@ class SwiftStorage(object):
         self.locked = False
         self.meta = dict()
 
+        self.bytes_in = 0
+        self.bytes_out = 0
+
         self.cache = cache
         if self.cache is None:
             self.cache = Cache(int(1024**2 / self.object_size))
@@ -176,6 +179,7 @@ class SwiftStorage(object):
                     raise IOError(errno.EIO, "Storage error: %s" % ex)
                 return '\0' * self.object_size
 
+            self.bytes_in += self.object_size
             self.cache.set(object_num, data)
         return data
 
@@ -194,6 +198,7 @@ class SwiftStorage(object):
         if etag != checksum:
             raise IOError(errno.EAGAIN, "Block integrity error (object_num=%s)" % object_num)
 
+        self.bytes_out += self.object_size
         self.cache.set(object_num, data)
 
     def seek(self, offset):

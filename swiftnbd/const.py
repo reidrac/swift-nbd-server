@@ -38,3 +38,6 @@ secrets_file = "/etc/swiftnbd/secrets.conf"
 # for disk format versioning
 disk_version = "1"
 
+# stats delay (seconds)
+stats_delay = 300
+

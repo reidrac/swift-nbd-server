@@ -26,6 +26,9 @@ import struct
 import logging
 
 from gevent.server import StreamServer
+from gevent import spawn_later
+
+from swiftnbd.const import stats_delay
 
 class Server(StreamServer):
     """
@@ -44,8 +47,26 @@ class Server(StreamServer):
     def __init__(self, listener, store):
         super(Server, self).__init__(listener)
 
+        self.bytes_in = 0
+        self.bytes_out = 0
+
         self.store = store
         self.log = logging.getLogger(__package__)
+        self.log_stats()
+
+    def log_stats(self):
+        """Log periodically server stats"""
+        self.log.info("STATS: in=%s (%s), out=%s (%s)" % (self.bytes_in,
+                                                          self.store.bytes_out,
+                                                          self.bytes_out,
+                                                          self.store.bytes_in,
+                                                          ))
+
+        cache = len(self.store.cache) * self.store.object_size
+        limit = self.store.cache.limit * self.store.object_size
+        self.log.info("CACHE: size=%s, limit=%s (%.2f%%)" % (cache, limit, (cache*100.0/limit)))
+
+        spawn_later(stats_delay, self.log_stats)
 
     def nbd_response(self, fob, handle, error=0, data=None):
         fob.write(self.NBD_RESPONSE + struct.pack('>L', error) + struct.pack(">Q", handle))
@@ -105,6 +126,7 @@ class Server(StreamServer):
                     self.nbd_response(fob, handle, error=ex.errno)
                     continue
 
+                self.bytes_in += length
                 self.nbd_response(fob, handle)
 
             elif cmd == self.NBD_CMD_READ:
@@ -117,6 +139,8 @@ class Server(StreamServer):
                     self.nbd_response(fob, handle, error=ex.errno)
                     continue
 
+                if data:
+                    self.bytes_out += len(data)
                 self.nbd_response(fob, handle, data=data)
 
             elif cmd == self.NBD_CMD_FLUSH:
