@@ -22,10 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import logging
-from logging.handlers import SysLogHandler
 import errno
-import os
 from time import time
 from cStringIO import StringIO
 from hashlib import md5
