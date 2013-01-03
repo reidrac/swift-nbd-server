@@ -32,6 +32,7 @@ from hashlib import md5
 
 from swiftclient import client
 
+from swiftnbd.common import getMeta, setMeta
 from swiftnbd.cache import Cache
 
 class SwiftStorage(object):
