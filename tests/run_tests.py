@@ -24,7 +24,7 @@ THE SOFTWARE.
 
 import unittest
 
-from test_blockfile import *
+from test_swiftstorage import *
 from test_cache import *
 
 if __name__ == '__main__':

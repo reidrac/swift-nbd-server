@@ -68,7 +68,7 @@ class MockConnection(object):
         MockConnection.objects[object_name] = data
         return md5(data).hexdigest()
 
-class SwiftBlockFileTestCase(unittest.TestCase):
+class SwiftStorageTestCase(unittest.TestCase):
     """Test the object-split file class."""
     def setUp(self):
         # monkey-patch swiftclient to use out mock up
