@@ -23,7 +23,6 @@ THE SOFTWARE.
 """
 
 import logging
-from logging.handlers import SysLogHandler
 from collections import Counter
 
 class Cache(object):
@@ -63,7 +62,7 @@ class Cache(object):
         if len(self.data) > self.limit:
             self.log.debug("cache size is over limit (%s > %s)" % (len(self.data), self.limit))
             less_used = self.ref.most_common()[:-3:-1]
-            for key, freq in less_used:
+            for key, _ in less_used:
                 if object_name != key:
                     self.log.debug("cache free: %s, %s" % (key, self.ref[key]))
                     del self.ref[key]
