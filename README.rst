@@ -70,9 +70,9 @@ Notes:
   container metadata (as long as the number-of-objects is the same, it won't affect
   the stored data); this is only until we have a specific tool for that.
 
-After the container is setup, it can be served with swiftnbdd::
+After the container is setup, it can be served with swiftnbd-server::
 
-    swiftnbdd container-name --secrets secrets.conf
+    swiftnbd-server container-name --secrets secrets.conf
 
 Notes:
 

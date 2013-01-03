@@ -32,7 +32,7 @@ from swiftnbd.common import setLog, setMeta, getMeta, getSecrets
 
 class Main(object):
     def __init__(self):
-        parser = ArgumentParser(description="Setup a OpenStack Object Storage container to be used by swiftnbdd.",
+        parser = ArgumentParser(description="Setup a OpenStack Object Storage container to be used by swiftnbd-server.",
                                 epilog="Contact and support: %s" % project_url
                                 )
 
