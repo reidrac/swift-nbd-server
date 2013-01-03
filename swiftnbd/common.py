@@ -27,8 +27,6 @@ from logging.handlers import SysLogHandler
 import os
 from ConfigParser import RawConfigParser
 
-from swiftclient import client
-
 def getSecrets(container, secrets_file):
     """Read secrets"""
     stat = os.stat(secrets_file)
