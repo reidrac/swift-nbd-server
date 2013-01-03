@@ -41,6 +41,9 @@ class Cache(object):
         self.log = logging.getLogger(__package__)
         self.log.debug("cache size: %s" % self.limit)
 
+    def __len__(self):
+        return len(self.data)
+
     def get(self, object_name, default=None):
         """Get an element from the cache"""
         if self.ref[object_name] > 0:
