@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 swiftnbd. tests for the common module
-Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
+Copyright (C) 2013 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
