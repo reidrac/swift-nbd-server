@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 swiftnbd. common toolset
-Copyright (C) 2012 by Juan J. Martinez <jjm@usebox.net>
+Copyright (C) 2013 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,13 @@ def getSecrets(container, secrets_file):
             conf.get(container, 'password'),
             conf.get(container, 'authurl'),
             )
+
+def getContainers(secrets_file):
+    """Return a list of containers read from a secrets file"""
+    conf = RawConfigParser(dict(username=None, password=None, authurl=None))
+    conf.read(secrets_file)
+
+    return conf.sections()
 
 def setLog(debug=False, use_syslog=False, use_file=None):
     """Setup logger"""
