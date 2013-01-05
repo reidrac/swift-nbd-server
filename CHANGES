@@ -2,6 +2,7 @@
 
    * 0.9.1:
 
+     - added authurl per container support to secrets.conf
      - fix in cache initialisation code
      - log server stats periodically 
      - added swiftnbd-ctl tool to list/unlock containers
