@@ -6,7 +6,7 @@ This is a Network Block Device (NBD) server for OpenStack Object Storage (Swift)
 Very often users want to run tools like rsync on top of Swift, but this is not
 possible because the object storage HTTP API can't provide a file system alike
 functionality. This project aims to support a block interface for the object
-storage via NBD. 
+storage via NBD.
 
 **swiftnbd** translates the NBD requests (read/write with offset and length) to Swift object
 operations, as displayed in the following picture:
@@ -66,9 +66,6 @@ For example, setup a 1GB storage in myndb0 container::
 Notes:
 
 - by default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB.
-- swiftnbd-setup can be used to unlock a storage using the -f flag to overwrite the
-  container metadata (as long as the number-of-objects is the same, it won't affect
-  the stored data); this is only until we have a specific tool for that.
 
 After the container is setup, it can be served with swiftnbd-server::
 
@@ -92,6 +89,9 @@ Before stopping the server, be sure you unmount the device and stop the NBD clie
 
     umount /mnt
     nbd-client -d /dev/nbd0
+
+Finally **siwftnbd-ctl** can be used to list information about containers in a secrets
+file and to unlock a locked container.
 
 Please check --help for further details.
 
