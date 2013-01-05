@@ -65,7 +65,6 @@ class Main(object):
         self.args = parser.parse_args()
 
         self.log = setLog(debug=self.args.verbose)
-        self.log.debug(dict((k, v) for k, v in vars(self.args).iteritems() if k != "password"))
 
         try:
             self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file)
