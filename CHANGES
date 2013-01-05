@@ -1,3 +1,12 @@
+2013-01-05 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.9.1:
+
+     - fix in cache initialisation code
+     - log server stats periodically 
+     - added swiftnbd-ctl tool to list/unlock containers
+     - small misc pep8 fixes
+
 2012-12-31 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9: first public release
