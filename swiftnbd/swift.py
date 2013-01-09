@@ -26,17 +26,23 @@ import errno
 from time import time
 from cStringIO import StringIO
 from hashlib import md5
+import socket
 
 from swiftclient import client
 
 from swiftnbd.common import getMeta, setMeta
 from swiftnbd.cache import Cache
 
+class StorageError(IOError):
+    """Storage error exception."""
+    def __init__(self, errno, ex):
+        super(StorageError, self).__init__(errno, "Storage error: %s" % ex)
+
 class SwiftStorage(object):
     """
     Manages a object-split file stored in OpenStack Object Storage (swift).
 
-    May raise IOError.
+    May raise StorageError (IOError).
     """
     cache = None
 
@@ -67,20 +73,20 @@ class SwiftStorage(object):
 
         try:
             headers, _ = self.cli.get_container(self.container)
-        except client.ClientException as ex:
-            raise IOError(errno.EACCES, "Storage error: %s" % ex.http_status)
+        except (socket.error, client.ClientException) as ex:
+            raise StorageError(errno.EIO, "Failed to lock: %s" % ex)
 
         self.meta = getMeta(headers)
 
         if self.meta.get('client'):
-            raise IOError(errno.EBUSY, "Storage already in use: %s" % self.meta['client'])
+            raise StorageError(errno.EBUSY, "Already in use: %s" % self.meta['client'])
 
         self.meta['client'] = "%s@%i" % (client_id, time())
         hdrs = setMeta(self.meta)
         try:
             self.cli.put_container(self.container, headers=hdrs)
-        except client.ClientException as ex:
-            raise IOError(errno.EIO, "Failed to lock: %s" % ex.http_status)
+        except (socket.error, client.ClientException) as ex:
+            raise StorageError(errno.EIO, "Failed to lock: %s" % ex)
 
         self.locked = True
 
@@ -94,8 +100,8 @@ class SwiftStorage(object):
         hdrs = setMeta(self.meta)
         try:
             self.cli.put_container(self.container, headers=hdrs)
-        except client.ClientException as ex:
-            raise IOError(errno.EIO, "Failed to unlock: %s" % ex.http_status)
+        except (socket.error, client.ClientException) as ex:
+            raise StorageError(errno.EIO, "Failed to unlock: %s" % ex)
 
         self.locked = False
 
@@ -174,9 +180,11 @@ class SwiftStorage(object):
             object_name = self.object_name(object_num)
             try:
                 _, data = self.cli.get_object(self.container, object_name)
+            except socket.error as ex:
+                raise StorageError(errno.EIO, ex)
             except client.ClientException as ex:
                 if ex.http_status != 404:
-                    raise IOError(errno.EIO, "Storage error: %s" % ex)
+                    raise StorageError(errno.EIO, ex)
                 return '\0' * self.object_size
 
             self.bytes_in += self.object_size
@@ -185,25 +193,25 @@ class SwiftStorage(object):
 
     def put_object(self, object_num, data):
         if object_num >= self.objects:
-            raise IOError(errno.ESPIPE, "Write offset out of bounds")
+            raise StorageError(errno.ESPIPE, "Write offset out of bounds")
 
         object_name = self.object_name(object_num)
         try:
             etag = self.cli.put_object(self.container, object_name, StringIO(data))
-        except client.ClientException as ex:
-            raise IOError(errno.EIO, "Storage error: %s" % ex)
+        except (socket.error, client.ClientException) as ex:
+            raise StorageError(errno.EIO, ex)
 
         checksum = md5(data).hexdigest()
         etag = etag.lower()
         if etag != checksum:
-            raise IOError(errno.EAGAIN, "Block integrity error (object_num=%s)" % object_num)
+            raise StorageError(errno.EAGAIN, "Block integrity error (object_num=%s)" % object_num)
 
         self.bytes_out += self.object_size
         self.cache.set(object_num, data)
 
     def seek(self, offset):
         if offset < 0 or offset > self.size:
-            raise IOError(errno.ESPIPE, "Offset out of bounds")
+            raise StorageError(errno.ESPIPE, "Offset out of bounds")
 
         self.pos = offset
 
