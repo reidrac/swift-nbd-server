@@ -191,7 +191,7 @@ class SwiftStorage(object):
         try:
             etag = self.cli.put_object(self.container, object_name, StringIO(data))
         except client.ClientException as ex:
-            raise IOError("Storage error: %s" % ex, errno=errno.EIO)
+            raise IOError(errno.EIO, "Storage error: %s" % ex)
 
         checksum = md5(data).hexdigest()
         etag = etag.lower()
