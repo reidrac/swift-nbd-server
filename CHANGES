@@ -1,3 +1,11 @@
+2013-01-13 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.9.2:
+
+     - simplified output option for listing containers
+     - better error handling on storage connectivity errors
+     - small fixes
+
 2013-01-05 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9.1:
