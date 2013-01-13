@@ -23,12 +23,11 @@ THE SOFTWARE.
 """
 
 import socket
-import argparse
 from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbd.const import version, project_url, auth_url, object_size, secrets_file, disk_version
+from swiftnbd.const import version, project_url, auth_url, secrets_file
 from swiftnbd.common import setLog, setMeta, getMeta, getSecrets, getContainers
 
 class Main(object):
