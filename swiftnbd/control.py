@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+from __future__ import print_function
 import socket
 from argparse import ArgumentParser
 
@@ -40,6 +41,9 @@ class Main(object):
         subp = parser.add_subparsers(title="commands")
 
         p = subp.add_parser('list', help='list all containers and their information')
+        p.add_argument("-s", "--simple-output", dest="simple",
+                       action="store_true",
+                       help="write simplified output to stdout")
         p.set_defaults(func=self.do_list)
 
         p = subp.add_parser('unlock', help='unlock a container')
@@ -72,6 +76,11 @@ class Main(object):
 
         self.log.debug("listing containers")
 
+        if self.args.simple:
+            out = print
+        else:
+            out = self.log.info
+
         containers = getContainers(self.args.secrets_file)
 
         prev_authurl = None
@@ -98,14 +107,14 @@ class Main(object):
 
                 if meta:
                     lock = "unlocked" if not 'client' in meta else "locked by %s" % meta['client']
-                    self.log.info("%s objects=%s size=%s (version=%s, %s)" % (cont,
-                                                                              meta['objects'],
-                                                                              meta['object-size'],
-                                                                              meta['version'],
-                                                                              lock,
-                                                                              ))
+                    out("%s objects=%s size=%s (version=%s, %s)" % (cont,
+                                                                    meta['objects'],
+                                                                    meta['object-size'],
+                                                                    meta['version'],
+                                                                    lock,
+                                                                    ))
                 else:
-                    self.log.info("%s is not a swiftnbd container" % cont)
+                    out("%s is not a swiftnbd container" % cont)
 
             prev_authurl = authurl
 
