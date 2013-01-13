@@ -54,6 +54,8 @@ class Server(StreamServer):
         self.log = logging.getLogger(__package__)
         self.log_stats()
 
+        self.set_handle(self.handler)
+
     def log_stats(self):
         """Log periodically server stats"""
         self.log.info("STATS: in=%s (%s), out=%s (%s)" % (self.bytes_in,
@@ -74,7 +76,7 @@ class Server(StreamServer):
             fob.write(data)
         fob.flush()
 
-    def handle(self, socket, address):
+    def handler(self, socket, address):
         host, port = address
         self.log.info("Incoming connection from %s:%s" % address)
 
