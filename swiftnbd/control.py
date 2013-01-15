@@ -24,12 +24,14 @@ THE SOFTWARE.
 
 from __future__ import print_function
 import socket
+import sys
 from argparse import ArgumentParser
 
 from swiftclient import client
 
 from swiftnbd.const import version, project_url, auth_url, secrets_file
 from swiftnbd.common import setLog, setMeta, getMeta, getSecrets, getContainers
+from swiftnbd.swift import SwiftStorage, StorageError
 
 class Main(object):
 
@@ -50,6 +52,14 @@ class Main(object):
         p.add_argument("container", help="container to unlock")
         p.set_defaults(func=self.do_unlock)
 
+        p = subp.add_parser('download', help='download a device as a raw image')
+        p.add_argument("container", help="container to download")
+        p.add_argument("image", help="local file to store the image")
+        p.add_argument("-q", "--quiet", dest="quiet",
+                       action="store_true",
+                       help="don't show the process bar")
+        p.set_defaults(func=self.do_download)
+
         parser.add_argument("--version", action="version", version="%(prog)s "  + version)
 
         parser.add_argument("--secrets", dest="secrets_file",
@@ -68,6 +78,11 @@ class Main(object):
         self.args = parser.parse_args()
 
         self.log = setLog(debug=self.args.verbose)
+
+        # setup by _setup_client()
+        self.authurl = None
+        self.username = None
+        self.password = None
 
     def run(self):
         return self.args.func()
@@ -120,15 +135,20 @@ class Main(object):
 
         return 0
 
-    def do_unlock(self):
+    def _setup_client(self):
+        """
+        Setup a client connection.
 
-        self.log.debug("unlocking %s" % self.args.container)
+        Sets username, password and authurl.
+
+        Returns a client connection, metadata tuple or (None, None) on error.
+        """
 
         try:
             self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file)
         except ValueError as ex:
             self.log.error(ex)
-            return 1
+            return (None, None)
 
         if self.authurl is None:
             self.authurl = self.args.authurl
@@ -142,7 +162,7 @@ class Main(object):
                 self.log.error("%s doesn't exist" % self.args.container)
             else:
                 self.log.error(ex)
-            return 1
+            return (None, None)
 
         self.log.debug(headers)
 
@@ -151,7 +171,17 @@ class Main(object):
 
         if not meta:
             self.log.error("%s hasn't been setup to be used with swiftnbd" % self.args.container)
-            return 1
+            return (None, None)
+
+        return (cli, meta)
+
+    def do_unlock(self):
+
+        self.log.debug("unlocking %s" % self.args.container)
+
+        cli, meta = self._setup_client()
+        if cli is None:
+            return 0
         elif 'client' not in meta:
             self.log.warning("%s is not locked, nothing to do" % self.args.container)
             return 0
@@ -169,6 +199,70 @@ class Main(object):
             return 1
 
         self.log.info("Done, %s is unlocked" % self.args.container)
+
+        return 0
+
+    def do_download(self):
+
+        self.log.debug("downloading %s" % self.args.container)
+
+        cli, meta = self._setup_client()
+        if cli is None:
+            return 0
+        elif 'client' in meta:
+            self.log.error("%s is locked, downloading a container in use is unreliable" % self.args.container)
+            return 0
+
+        object_size = int(meta['object-size'])
+        objects = int(meta['objects'])
+
+        store = SwiftStorage(self.authurl,
+                             self.username,
+                             self.password,
+                             self.args.container,
+                             object_size,
+                             objects,
+                             )
+        try:
+            store.lock("ctl-download")
+        except StorageError as ex:
+            self.log.error(ex)
+            return 0
+
+        size = 0
+        fdo = None
+        try:
+            fdo = open(self.args.image, "w")
+
+            while True:
+                data = store.read(object_size)
+                if data == '':
+                    break
+                fdo.write(data)
+                size += len(data)
+                if not self.args.quiet:
+                    sys.stdout.write("\rDownloading %s [%.2d%%]" % (self.args.container, 100*size/(objects*object_size)))
+                    sys.stdout.flush()
+        except IOError as ex:
+            self.log.error(ex)
+            return 0
+        except KeyboardInterrupt:
+            self.log.warning("user interrupt")
+            return 0
+        finally:
+            if fdo:
+                fdo.close()
+
+            try:
+                store.unlock()
+            except StorageError as ex:
+                self.log.warning("Failed to unlock %s: %s" % (self.args.container, ex))
+
+        if not self.args.quiet:
+            sys.stdout.write("\r")
+            sys.stdout.flush()
+
+        self.log.info("Done, %s bytes written" % size)
 
         return 0
 
