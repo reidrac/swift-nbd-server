@@ -52,7 +52,7 @@ class Main(object):
         p.add_argument("container", help="container to unlock")
         p.set_defaults(func=self.do_unlock)
 
-        p = subp.add_parser('download', help='download a device as a raw image')
+        p = subp.add_parser('download', help='download a container as a raw image')
         p.add_argument("container", help="container to download")
         p.add_argument("image", help="local file to store the image")
         p.add_argument("-q", "--quiet", dest="quiet",
