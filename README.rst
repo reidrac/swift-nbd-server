@@ -1,3 +1,4 @@
+================
 Swift NBD Server
 ================
 
@@ -8,15 +9,23 @@ possible because the object storage HTTP API can't provide a file system alike
 functionality. This project aims to support a block interface for the object
 storage via NBD.
 
+
+How it Works
+============
+
 **swiftnbd** translates the NBD requests (read/write with offset and length) to Swift object
 operations, as displayed in the following picture:
 
 .. image:: https://github.com/reidrac/swift-nbd-server/raw/master/block2object.png
 
 Although this strategy may work with any block interface, NBD was chosen because of its simplicity.
-The NBD server can serve the blocks over the network, but I recommend it's used locally. Because the
-communication with Swift will be the bottleneck, I expect the possible overhead of NBD on localhost
-to not be significant.
+The NBD server can serve the blocks over the network, but is recommended that it is used locally.
+Because the communication with Swift will be the bottleneck, the possible overhead of NBD on localhost
+is expected to not be significant.
+
+The block device can be used only by one location at once. When a client is connected to the server,
+the container used as storage is marked as *locked* by adding metadata information to the container
+until the client disconnects and the container can be unlocked.
 
 References:
 
@@ -27,7 +36,7 @@ References:
 
 
 Install
--------
+=======
 
 Requirements:
 
@@ -46,7 +55,7 @@ Alternatively you can install it with pip::
 
 
 Usage
------
+=====
 
 A container needs to be setup with **swiftnbd-setup** to be used by the server. First create
 a *secrets.conf* file::
@@ -55,32 +64,36 @@ a *secrets.conf* file::
     username = user
     password = pass
 
+Optionally an *authurl* token can be used to specify an authentication URL per container.
+
+The default location for the *secrets* is */etc/swiftnbd/secrets.conf*, and alternative
+location can be provided using *--secrets* flag.
+
 Then run the setup tool using the container name as first parameter::
 
     swiftnbd-setup container-name number-of-objects
 
 For example, setup a 1GB storage in myndb0 container::
 
-    swiftnbd-setup mynbd0 16384 --secrets secrets.conf
+    swiftnbd-setup mynbd0 16384
 
-Notes:
-
-- by default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB.
+By default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB.
 
 After the container is setup, it can be served with swiftnbd-server::
 
-    swiftnbd-server container-name --secrets secrets.conf
+    swiftnbd-server container-name
 
-Notes:
+For debugging purposes the *-vf* flag is recommended (verbose and foreground).
 
-- for debugging purposes, use -vf flag (verbose and foreground).
+The server implements a local cache that by default is limited to 64 MB. That value can
+be configured using the *-c* flag indicating the max amount of memory to be used (in MB).
 
-Then you can use nbd-client to create the block device (as root)::
+Once the server is running, nbd-client can be used to create the block device (as root)::
 
     modprobe nbd
     nbd-client 127.0.0.1 10811 /dev/nbd0
 
-Now just use /dev/nbd0 as a regular block device, ie::
+Then */dev/nbd0* can be used as a regular block device, ie::
 
     mkfs.ext3 /dev/nbd0
     mount /dev/nbd0 /mnt
@@ -90,18 +103,33 @@ Before stopping the server, be sure you unmount the device and stop the NBD clie
     umount /mnt
     nbd-client -d /dev/nbd0
 
-Finally **siwftnbd-ctl** can be used to list information about containers in a secrets
-file and to unlock a locked container.
-
 Please check --help for further details.
+
+
+swifnbd-ctl
+-----------
+
+**siwftnbd-ctl** can be used to list information about containers in a secrets file, 
+unlock a locked container and download an image of the disk stored in the container.
+
+To list the containers::
+
+    swiftnbd-ctl list -s
+
+To unlock a locked container::
+
+    swiftnbd-ctl unlock conatiner-name
+
+To download a container into a local disk image (the resulting disk image can be
+mounted using a loop device)::
+
+    swiftnbd-ctl download container-name image-file.raw
 
 
 Known issues and limitations
 ----------------------------
 
 - The default 64KB object size is a wild/random guess, other values could be better.
-- The storage can't be mounted in more than one client at once (there's a lock mechanism
-  for that).
 - It can be used over the Internet but the performance is dependant on the bandwidth, so
   it's recommended that the storage is accessible via LAN (or same data center with 100mbps
   or better).
