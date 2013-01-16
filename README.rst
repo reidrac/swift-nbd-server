@@ -66,7 +66,7 @@ a *secrets.conf* file::
 
 Optionally an *authurl* token can be used to specify an authentication URL per container.
 
-The default location for the *secrets* is */etc/swiftnbd/secrets.conf*, and alternative
+The default location for the *secrets* is */etc/swiftnbd/secrets.conf*, and an alternative
 location can be provided using *--secrets* flag.
 
 Then run the setup tool using the container name as first parameter::
@@ -106,8 +106,8 @@ Before stopping the server, be sure you unmount the device and stop the NBD clie
 Please check --help for further details.
 
 
-swifnbd-ctl
------------
+Control tool
+------------
 
 **siwftnbd-ctl** can be used to list information about containers in a secrets file, 
 unlock a locked container and download an image of the disk stored in the container.
@@ -127,7 +127,7 @@ mounted using a loop device)::
 
 
 Known issues and limitations
-----------------------------
+============================
 
 - The default 64KB object size is a wild/random guess, other values could be better.
 - It can be used over the Internet but the performance is dependant on the bandwidth, so
@@ -136,14 +136,14 @@ Known issues and limitations
 
 
 License
--------
+=======
 
 This is free software under the terms of MIT license (check COPYING file
 included in this package).
 
 
 Contact and support
--------------------
+===================
 
 The project website is at: https://github.com/reidrac/swift-nbd-server
 
@@ -151,7 +151,7 @@ There you can file bug reports, ask for help or contribute patches.
 
 
 Author
-------
+======
 
 - Juan J. Martinez <jjm@usebox.net>
 
