@@ -28,14 +28,14 @@ Test 1:
 a. time 0m28.235s, in=4556800 (7471104), out=19456 (0), cache size=4980736, limit=67108864 (7.42%)
 b. time 5m20.040s, in=4556800 (4694016), out=19456 (0), cache size=4579328, limit=67108864 (6.82%)
 
-.. image:: https://github.com/reidrac/swift-nbd-server/doc/raw/master/obj-size-case-a.png
+.. image:: https://raw.github.com/reidrac/swift-nbd-server/master/doc/obj-size-case-a.png
 
 Test 2:
 
 a. time 0m3.208s, in=2124800 (4980736), out=344064 (524288), cache size=2555904, limit=67108864 (3.81%)
 b. time 0m4.375s, in=533504 (573440), out=344064 (208896), cache size=733184, limit=67108864 (1.09%)
 
-.. image:: https://github.com/reidrac/swift-nbd-server/doc/raw/master/obj-size-case-b.png
+.. image:: https://raw.github.com/reidrac/swift-nbd-server/master/doc/obj-size-case-b.png
 
 
 Conclusions
