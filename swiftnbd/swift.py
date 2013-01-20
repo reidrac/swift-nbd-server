@@ -187,6 +187,11 @@ class SwiftStorage(object):
                     raise StorageError(errno.EIO, ex)
                 return '\0' * self.object_size
 
+            if len(data) != self.object_size:
+                raise StorageError(errno.EIO,
+                                   "Invalid object size (%s), %s expected" % len(data), self.object_size
+                                   )
+
             self.bytes_in += self.object_size
             self.cache.set(object_num, data)
         return data
