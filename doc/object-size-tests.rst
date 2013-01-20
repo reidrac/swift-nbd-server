@@ -4,7 +4,7 @@ Object size tests
 The tests have been performed over the Internet with a ~19 Mbps (down) and ~1.9
 Mbps (up) connection and swiftnbd 0.9.2. This is a quite extreme use case, in a
 production environment 100 Mbps or better is recommended. The time measurement
-is provided as a comparative figure between the different object sizes.
+is provided as a comparative figure between different object sizes.
 
 All the tests start with an empty cache (64 MB default limit) and an empty
 container.
@@ -48,7 +48,4 @@ Conclusions
   the requests.
 - The cache is important to minimize the number of GET requests.
 - Depending on the available bandwidth, I would suggest experimenting with larger blocks.
-
-
-Jan 20th, 2013
 
