@@ -1,3 +1,11 @@
+2013-01-21 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.9.3:
+
+     - delete container
+     - detect object size mismatch (objects size != configured object-size)
+     - download container into a local file (raw image of the disk)
+
 2013-01-13 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9.2:
