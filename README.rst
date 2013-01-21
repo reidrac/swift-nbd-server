@@ -109,8 +109,8 @@ Please check --help for further details.
 Control tool
 ------------
 
-**siwftnbd-ctl** can be used to list information about containers in a secrets file, 
-unlock a locked container and download an image of the disk stored in the container.
+**siwftnbd-ctl** is used to perform different maintenance operations on the
+containers. It communicates directly with the object storage.
 
 To list the containers::
 
@@ -118,7 +118,7 @@ To list the containers::
 
 To unlock a locked container::
 
-    swiftnbd-ctl unlock conatiner-name
+    swiftnbd-ctl unlock container-name
 
 To download a container into a local disk image (the resulting disk image can be
 mounted using a loop device)::
