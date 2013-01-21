@@ -60,6 +60,10 @@ class Main(object):
                        help="don't show the process bar")
         p.set_defaults(func=self.do_download)
 
+        p = subp.add_parser('delete', help='delete a container')
+        p.add_argument("container", help="container to delete")
+        p.set_defaults(func=self.do_delete)
+
         parser.add_argument("--version", action="version", version="%(prog)s "  + version)
 
         parser.add_argument("--secrets", dest="secrets_file",
@@ -263,6 +267,51 @@ class Main(object):
             sys.stdout.flush()
 
         self.log.info("Done, %s bytes written" % size)
+
+        return 0
+
+    def do_delete(self):
+
+        self.log.debug("deleting %s" % self.args.container)
+
+        cli, meta = self._setup_client()
+        if cli is None:
+            return 0
+        elif 'client' in meta:
+            self.log.error("%s is locked" % self.args.container)
+            return 0
+
+        # this is the default limit for swift
+        limit = 10000
+        marker = None
+        while True:
+            try:
+                _, objs = cli.get_container(self.args.container, limit=limit, marker=marker)
+            except client.ClientException as ex:
+                self.log.error(ex)
+                return 1
+
+            for obj in objs:
+                if 'name' in obj:
+                    try:
+                        cli.delete_object(self.args.container, obj['name'])
+                    except client.ClientException as ex:
+                        self.log.error("Failed to delete %s: %s" % (obj['name'], ex))
+                        return 1
+
+            if len(objs) < limit:
+                break
+            else:
+                marker = objs[-1]
+                self.log.debug("More than %s files, marker=%s" % (limit, marker))
+
+        try:
+            cli.delete_container(self.args.container)
+        except client.ClientException as ex:
+            self.log.error("Failed to delete %s: %s" % (self.args.container, ex))
+            return 1
+
+        self.log.info("Done, %s has been deleted" % self.args.container)
 
         return 0
 

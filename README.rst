@@ -125,6 +125,11 @@ mounted using a loop device)::
 
     swiftnbd-ctl download container-name image-file.raw
 
+To delete a container (all the objects in the container will deleted before deleting
+the container)::
+
+    swiftnbd-ctl delete container-name
+
 
 Known issues and limitations
 ============================
