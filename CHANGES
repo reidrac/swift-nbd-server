@@ -1,3 +1,11 @@
+2013-01-22 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.9.4:
+
+     - Better documentation
+     - swiftnbd-setup has been replaced by swiftnbd-ctl setup
+     - swiftnbd-ctl now returns different than 0 on error
+
 2013-01-21 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9.3:
