@@ -69,7 +69,8 @@ Optionally an *authurl* token can be used to specify an authentication URL per c
 The default location for the *secrets* is */etc/swiftnbd/secrets.conf*, and an alternative
 location can be provided using *--secrets* flag.
 
-Then run the control tool using the container name as first parameter::
+Then run the control tool with *setup* command using the container name as first parameter
+and the maximum number of objects you want to allocate as second parameter::
 
     swiftnbd-ctl setup container-name number-of-objects
 
@@ -77,7 +78,7 @@ For example, setup a 1GB storage in myndb0 container::
 
     swiftnbd-ctl setup mynbd0 16384
 
-By default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB.
+By default the objects stored in swift by the server are 64KB, so 16384 * 65536 is 1GB.
 
 After the container is setup, it can be served with swiftnbd-server::
 
@@ -103,14 +104,14 @@ Before stopping the server, be sure you unmount the device and stop the NBD clie
     umount /mnt
     nbd-client -d /dev/nbd0
 
-Please check --help for further details.
+Please check *--help* for further details.
 
 
 Control tool
 ------------
 
-**siwftnbd-ctl** is used to perform different maintenance operations on the
-containers. It communicates directly with the object storage.
+siwftnbd-ctl is used to perform different maintenance operations on the containers. It
+communicates directly with the object storage.
 
 To list the containers::
 
@@ -120,7 +121,7 @@ To setup a container::
 
     swiftnbd-ctl setup container-name number-of-objects
 
-A custom object size can be indicated with the *--object-size* flag (default is 64 KB).
+A custom object size can be indicated with the *--object-size* flag (default is 65536).
 
 To unlock a locked container::
 
@@ -142,7 +143,7 @@ Known issues and limitations
 
 - The default 64KB object size is a wild/random guess, other values could be better.
 - It can be used over the Internet but the performance is dependant on the bandwidth, so
-  it's recommended that the storage is accessible via LAN (or same data center with 100mbps
+  it's recommended that the storage is accessible via LAN (or same data center with 100 mbps
   or better).
 
 
