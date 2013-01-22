@@ -57,7 +57,7 @@ Alternatively you can install it with pip::
 Usage
 =====
 
-A container needs to be setup with **swiftnbd-setup** to be used by the server. First create
+A container needs to be setup with swiftnbd-ctl to be used by the server. First create
 a *secrets.conf* file::
 
     [container-name]
@@ -69,13 +69,13 @@ Optionally an *authurl* token can be used to specify an authentication URL per c
 The default location for the *secrets* is */etc/swiftnbd/secrets.conf*, and an alternative
 location can be provided using *--secrets* flag.
 
-Then run the setup tool using the container name as first parameter::
+Then run the control tool using the container name as first parameter::
 
-    swiftnbd-setup container-name number-of-objects
+    swiftnbd-ctl setup container-name number-of-objects
 
 For example, setup a 1GB storage in myndb0 container::
 
-    swiftnbd-setup mynbd0 16384
+    swiftnbd-ctl setup mynbd0 16384
 
 By default the objects stored in swift are 64KB, so 16384 * 65536 is 1GB.
 
@@ -115,6 +115,12 @@ containers. It communicates directly with the object storage.
 To list the containers::
 
     swiftnbd-ctl list -s
+
+To setup a container::
+
+    swiftnbd-ctl setup container-name number-of-objects
+
+A custom object size can be indicated with the *--object-size* flag (default is 64 KB).
 
 To unlock a locked container::
 

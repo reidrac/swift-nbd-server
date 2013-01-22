@@ -29,7 +29,7 @@ from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbd.const import version, project_url, auth_url, secrets_file
+from swiftnbd.const import version, project_url, auth_url, object_size, secrets_file, disk_version
 from swiftnbd.common import setLog, setMeta, getMeta, getSecrets, getContainers
 from swiftnbd.swift import SwiftStorage, StorageError
 
@@ -47,6 +47,20 @@ class Main(object):
                        action="store_true",
                        help="write simplified output to stdout")
         p.set_defaults(func=self.do_list)
+
+        p = subp.add_parser('setup', help='setup a container to be used by the server')
+        p.add_argument("container", help="container to setup")
+        p.add_argument("objects", help="number of objects")
+
+        p.add_argument("--object-size", dest="object_size",
+                       default=object_size,
+                       help="object size (default: %s)" % object_size)
+
+        p.add_argument("-f", "--force", dest="force",
+                       action="store_true",
+                       help="force operation")
+
+        p.set_defaults(func=self.do_setup)
 
         p = subp.add_parser('unlock', help='unlock a container')
         p.add_argument("container", help="container to unlock")
@@ -139,9 +153,10 @@ class Main(object):
 
         return 0
 
-    def _setup_client(self):
+    def _setup_client(self, create=False):
         """
         Setup a client connection.
+        If create is True and the container doesn't exist, it is created.
 
         Sets username, password and authurl.
 
@@ -163,7 +178,11 @@ class Main(object):
             headers, _ = cli.get_container(self.args.container)
         except (socket.error, client.ClientException) as ex:
             if getattr(ex, 'http_status', None) == 404:
-                self.log.error("%s doesn't exist" % self.args.container)
+                if create:
+                    self.log.warning("%s doesn't exist, will be created" % self.args.container)
+                    return (cli, dict())
+                else:
+                    self.log.error("%s doesn't exist" % self.args.container)
             else:
                 self.log.error(ex)
             return (None, None)
@@ -315,3 +334,26 @@ class Main(object):
 
         return 0
 
+    def do_setup(self):
+
+        self.log.debug("setting up %s" % self.args.container)
+
+        cli, meta = self._setup_client(create=True)
+        if cli is None:
+            return 1
+        elif meta and not self.args.force:
+            self.log.error("%s has already been setup" % self.args.container)
+            return 1
+
+        hdrs = setMeta(dict(version=disk_version, objects=self.args.objects, object_size=self.args.object_size, client='', last=''))
+        self.log.debug("Meta headers: %s" % hdrs)
+
+        try:
+            cli.put_container(self.args.container, headers=hdrs)
+        except client.ClientException as ex:
+            self.log.error(ex)
+            return 1
+
+        self.log.info("Done, %s" % self.args.container)
+
+        return 0

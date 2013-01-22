@@ -1,4 +1,3 @@
-- Integrate swiftnbd-setup into swiftnbd-ctl
 - More tests
 - Use the new NBD handshake protocol + advertise all the containers
 
