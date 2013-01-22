@@ -113,7 +113,7 @@ Control tool
 siwftnbd-ctl is used to perform different maintenance operations on the containers. It
 communicates directly with the object storage.
 
-To list the containers::
+To list the containers in the *secrets* file::
 
     swiftnbd-ctl list -s
 
@@ -132,7 +132,7 @@ mounted using a loop device)::
 
     swiftnbd-ctl download container-name image-file.raw
 
-To delete a container (all the objects in the container will deleted before deleting
+To delete a container (all the objects in the container will be deleted before deleting
 the container)::
 
     swiftnbd-ctl delete container-name
