@@ -204,10 +204,10 @@ class Main(object):
 
         cli, meta = self._setup_client()
         if cli is None:
-            return 0
+            return 1
         elif 'client' not in meta:
             self.log.warning("%s is not locked, nothing to do" % self.args.container)
-            return 0
+            return 1
 
         self.log.info("%s lock is: %s" % (self.args.container, meta['client']))
 
@@ -231,10 +231,10 @@ class Main(object):
 
         cli, meta = self._setup_client()
         if cli is None:
-            return 0
+            return 1
         elif 'client' in meta:
             self.log.error("%s is locked, downloading a container in use is unreliable" % self.args.container)
-            return 0
+            return 1
 
         object_size = int(meta['object-size'])
         objects = int(meta['objects'])
@@ -250,7 +250,7 @@ class Main(object):
             store.lock("ctl-download")
         except StorageError as ex:
             self.log.error(ex)
-            return 0
+            return 1
 
         size = 0
         fdo = None
@@ -268,10 +268,10 @@ class Main(object):
                     sys.stdout.flush()
         except IOError as ex:
             self.log.error(ex)
-            return 0
+            return 1
         except KeyboardInterrupt:
             self.log.warning("user interrupt")
-            return 0
+            return 1
         finally:
             if fdo:
                 fdo.close()
@@ -295,10 +295,10 @@ class Main(object):
 
         cli, meta = self._setup_client()
         if cli is None:
-            return 0
+            return 1
         elif 'client' in meta:
             self.log.error("%s is locked" % self.args.container)
-            return 0
+            return 1
 
         # this is the default limit for swift
         limit = 10000
