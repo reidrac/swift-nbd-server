@@ -103,7 +103,6 @@ class Server(StreamServer):
 
             if magic != 0x25609513:
                 self.log.error("[%s:%s]: Wrong magic number, disconnecting" % address)
-                socket.close()
                 break
 
             self.log.debug("[%s:%s]: cmd=%s, handle=%s, offset=%s, len=%s" % (host, port, cmd, handle, offset, length))
