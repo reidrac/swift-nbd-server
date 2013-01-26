@@ -33,7 +33,7 @@ import gevent
 from swiftclient import client
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
-from swiftnbd.common import setLog, getMeta, getSecrets
+from swiftnbd.common import setLog, getMeta, getAllSecrets, Credentials
 from swiftnbd.cache import Cache
 from swiftnbd.swift import SwiftStorage
 from swiftnbd.server import Server
@@ -49,8 +49,6 @@ class Main(object):
         parser = ArgumentParser(description=description,
                                 epilog="Contact and support: %s" % project_url
                                 )
-
-        parser.add_argument("container", help="container used as storage (set it up first)")
 
         parser.add_argument("--version", action="version", version="%(prog)s "  + version)
 
@@ -109,13 +107,8 @@ class Main(object):
 
         self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog, use_file=self.args.log_file)
 
-        try:
-            self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file)
-        except ValueError as ex:
-            parser.error(ex)
-
-        if self.authurl is None:
-            self.authurl = self.args.authurl
+        Credentials.default_authurl = self.args.authurl
+        self.containers = getAllSecrets(self.args.secrets_file)
 
     def run(self):
 
@@ -123,46 +116,50 @@ class Main(object):
             self.log.error("%s found: is the server already running?" % self.args.pidfile)
             return 1
 
-        cli = client.Connection(self.authurl, self.username, self.password)
-
-        try:
-            headers, _ = cli.get_container(self.args.container)
-        except (socket.error, client.ClientException) as ex:
-            if getattr(ex, 'http_status', None) == 404:
-                self.log.error("%s doesn't exist" % self.args.container)
-            else:
-                self.log.error(ex)
-            return 1
-        else:
-            self.log.debug(headers)
-
-            self.meta = getMeta(headers)
-            if not self.meta:
-                self.log.error("%s doesn't appear to be setup" % self.args.container)
-                return 1
-
-            self.log.debug("Meta: %s" % self.meta)
+        stores = dict()
+        for container, cred in self.containers.iteritems():
+            cli = client.Connection(cred.authurl, cred.username, cred.password)
 
             try:
-                self.object_size = int(self.meta['object-size'])
-                self.objects = int(self.meta['objects'])
+                headers, _ = cli.get_container(container)
+            except (socket.error, client.ClientException) as ex:
+                if getattr(ex, 'http_status', None) == 404:
+                    self.log.warning("%s doesn't exist, skipping" % container)
+                    continue
+                else:
+                    self.log.error(ex)
+                    return 1
+
+            self.log.debug(headers)
+
+            meta = getMeta(headers)
+            if not meta:
+                self.log.warning("%s doesn't appear to be setup, skipping" % container)
+                continue
+
+            self.log.debug("Meta: %s" % meta)
+
+            try:
+                object_size = int(meta['object-size'])
+                objects = int(meta['objects'])
             except ValueError as ex:
-                self.log.error("%s doesn't appear to be correct: %s" % (self.args.container, ex))
+                self.log.error("%s doesn't appear to be correct: %s" % (container, ex))
                 return 1
 
-            if self.meta['version'] != disk_version:
-                self.log.warning("Version mismatch %s != %s" % (self.meta['version'], disk_version))
+            if meta['version'] != disk_version:
+                self.log.warning("Version mismatch %s != %s in %s" % (meta['version'], disk_version, container))
 
-        store = SwiftStorage(self.args.authurl,
-                             self.username,
-                             self.password,
-                             self.args.container,
-                             self.object_size,
-                             self.objects,
-                             Cache(int(self.args.cache_limit*1024**2 / self.object_size)),
-                             )
+            stores[container] = SwiftStorage(cred.authurl,
+                                             cred.username,
+                                             cred.password,
+                                             container,
+                                             object_size,
+                                             objects,
+                                             Cache(int(self.args.cache_limit*1024**2 / object_size)),
+                                            )
+
         addr = (self.args.bind_address, self.args.bind_port)
-        server = Server(addr, store)
+        server = Server(addr, stores)
 
         gevent.signal(signal.SIGTERM, server.stop)
         gevent.signal(signal.SIGINT, server.stop)
@@ -183,7 +180,7 @@ class Main(object):
 
             gevent.reinit()
 
-        self.log.info("Starting to serve %s on %s:%s" % (store, addr[0], addr[1]))
+        self.log.info("Starting to serve on %s:%s" % (addr[0], addr[1]))
 
         try:
             fd = os.open(self.args.pidfile, (os.O_CREAT|os.O_EXCL|os.O_WRONLY), 0644)
@@ -199,10 +196,8 @@ class Main(object):
 
         os.remove(self.args.pidfile)
 
-        # unlock the storage before exit
-        if server.store and server.store.locked:
-            self.log.debug("unlocking storage...")
-            server.store.unlock()
+        # unlock the storages before exit
+        server.unlock_all()
 
         self.log.info("Exiting...")
         return 0
