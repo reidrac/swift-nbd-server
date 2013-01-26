@@ -30,7 +30,7 @@ from argparse import ArgumentParser
 from swiftclient import client
 
 from swiftnbd.const import version, project_url, auth_url, object_size, secrets_file, disk_version
-from swiftnbd.common import setLog, setMeta, getMeta, getSecrets, getContainers
+from swiftnbd.common import setLog, setMeta, getMeta, getSecrets, getContainers, Credentials
 from swiftnbd.swift import SwiftStorage, StorageError
 
 class Main(object):
@@ -116,21 +116,19 @@ class Main(object):
 
         containers = getContainers(self.args.secrets_file)
 
+        Credentials.default_authurl = self.args.authurl
         prev_authurl = None
         for cont in containers:
-            username, password, authurl = getSecrets(cont, self.args.secrets_file)
+            cred = getSecrets(cont, self.args.secrets_file)
 
-            if authurl is None:
-                authurl = self.args.authurl
-
-            if prev_authurl or prev_authurl != authurl:
-                cli = client.Connection(authurl, username, password)
+            if prev_authurl or prev_authurl != cred.authurl:
+                cli = client.Connection(cred.authurl, cred.username, cred.password)
 
             try:
                 headers, _ = cli.get_container(cont)
             except (socket.error, client.ClientException) as ex:
                 if getattr(ex, 'http_status', None) == 404:
-                    self.log.error("%s doesn't exist (auth-url: %s)" % (cont, authurl))
+                    self.log.error("%s doesn't exist (auth-url: %s)" % (cont, cred.authurl))
                 else:
                     self.log.error(ex)
             else:
@@ -149,7 +147,7 @@ class Main(object):
                 else:
                     out("%s is not a swiftnbd container" % cont)
 
-            prev_authurl = authurl
+            prev_authurl = cred.authurl
 
         return 0
 
@@ -163,14 +161,12 @@ class Main(object):
         Returns a client connection, metadata tuple or (None, None) on error.
         """
 
+        Credentials.default_authurl = self.args.authurl
         try:
-            self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file)
+            self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file).as_tuple()
         except ValueError as ex:
             self.log.error(ex)
             return (None, None)
-
-        if self.authurl is None:
-            self.authurl = self.args.authurl
 
         cli = client.Connection(self.authurl, self.username, self.password)
 
