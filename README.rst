@@ -40,7 +40,7 @@ Install
 
 Requirements:
 
-- Linux (or any platform with NBD client)
+- Linux (or any platform with NBD client; nbd-client 3.1+ recommended)
 - Python 2.7 (or later; Python 3 not supported yet)
 - python-swiftclient
 - gevent
@@ -56,6 +56,8 @@ Alternatively you can install it with pip::
 
 Usage
 =====
+
+**Important**: this documentation is valid for 0.9.4.
 
 A container needs to be setup with swiftnbd-ctl to be used by the server. First create
 a *secrets.conf* file::
