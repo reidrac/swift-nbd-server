@@ -29,6 +29,7 @@ from gevent.server import StreamServer
 from gevent import spawn_later
 
 from swiftnbd.const import stats_delay
+from swiftnbd.common import Stats
 
 class Server(StreamServer):
     """
@@ -61,29 +62,24 @@ class Server(StreamServer):
     # has flags, supports flush
     NBD_EXPORT_FLAGS = (1 << 0) ^ (1 << 2)
 
-    def __init__(self, listener, store):
+    def __init__(self, listener, stores):
         super(Server, self).__init__(listener)
 
-        self.bytes_in = 0
-        self.bytes_out = 0
-
-        self.store = store
         self.log = logging.getLogger(__package__)
+
+        self.stores = stores
+
+        self.stats = dict()
+        for store in self.stores.values():
+            self.stats[store] = Stats(store)
         self.log_stats()
 
         self.set_handle(self.handler)
 
     def log_stats(self):
         """Log periodically server stats"""
-        self.log.info("STATS: in=%s (%s), out=%s (%s)" % (self.bytes_in,
-                                                          self.store.bytes_out,
-                                                          self.bytes_out,
-                                                          self.store.bytes_in,
-                                                          ))
-
-        cache = len(self.store.cache) * self.store.object_size
-        limit = self.store.cache.limit * self.store.object_size
-        self.log.info("CACHE: size=%s, limit=%s (%.2f%%)" % (cache, limit, (cache*100.0/limit)))
+        for stats in self.stats.values():
+            stats.log_stats()
 
         spawn_later(stats_delay, self.log_stats)
 
@@ -95,6 +91,7 @@ class Server(StreamServer):
 
     def handler(self, socket, address):
         host, port = address
+        store, container = None, None
         self.log.info("Incoming connection from %s:%s" % address)
 
         try:
@@ -144,7 +141,7 @@ class Server(StreamServer):
                     if not data:
                         raise IOError("Negotiation failed: no export name was provided")
 
-                    if data != self.store.container:
+                    if data not in self.stores:
                         if not fixed:
                             raise IOError("Negotiation failed: unknown export name")
 
@@ -152,18 +149,24 @@ class Server(StreamServer):
                         fob.flush()
                         continue
 
-                    self.store.lock("%s:%s" % address)
+                    # we have negotiated a store and it will be used
+                    # until the client disonnects
+                    store = self.stores[data]
 
-                    fob.write(struct.pack('>QH', self.store.size, self.NBD_EXPORT_FLAGS) + "\x00"*124)
+                    store.lock("%s:%s" % address)
+
+                    self.log.info("[%s:%s] Negotiated export: %s" % (host, port, store.container))
+
+                    fob.write(struct.pack('>QH', store.size, self.NBD_EXPORT_FLAGS) + "\x00"*124)
                     fob.flush()
                     break
 
                 elif opt == self.NBD_OPT_LIST:
 
-                    export = self.store.container
-                    fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_SERVER, len(export) + 4))
-                    fob.write(struct.pack(">L", len(export)) + export)
-                    fob.flush()
+                    for container in self.stores.keys():
+                        fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_SERVER, len(container) + 4))
+                        fob.write(struct.pack(">L", len(container)) + container)
+                        fob.flush()
 
                     fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_ACK, 0))
                     fob.flush()
@@ -208,33 +211,33 @@ class Server(StreamServer):
                         raise IOError("%s bytes expected, disconnecting" % length)
 
                     try:
-                        self.store.seek(offset)
-                        self.store.write(data)
+                        store.seek(offset)
+                        store.write(data)
                     except IOError as ex:
                         self.log.error("[%s:%s]: %s" % (host, port, ex))
                         self.nbd_response(fob, handle, error=ex.errno)
                         continue
 
-                    self.bytes_in += length
+                    self.stats[store].bytes_in += length
                     self.nbd_response(fob, handle)
 
                 elif cmd == self.NBD_CMD_READ:
 
                     try:
-                        self.store.seek(offset)
-                        data = self.store.read(length)
+                        store.seek(offset)
+                        data = store.read(length)
                     except IOError as ex:
                         self.log.error("[%s:%s]: %s" % (host, port, ex))
                         self.nbd_response(fob, handle, error=ex.errno)
                         continue
 
                     if data:
-                        self.bytes_out += len(data)
+                        self.stats[store].bytes_out += len(data)
                     self.nbd_response(fob, handle, data=data)
 
                 elif cmd == self.NBD_CMD_FLUSH:
 
-                    self.store.flush()
+                    store.flush()
                     self.nbd_response(fob, handle)
 
                 else:
@@ -246,11 +249,18 @@ class Server(StreamServer):
             self.log.error("[%s:%s]: %s" % (host, port, ex))
 
         finally:
-
-            try:
-                self.store.unlock()
-            except IOError as ex:
-                self.log.error(ex)
+            if store:
+                try:
+                    store.unlock()
+                except IOError as ex:
+                    self.log.error(ex)
 
             socket.close()
+
+    def unlock_all(self):
+        """Unlock any locked storage."""
+        for store in self.stores.values():
+            if store.locked:
+                self.log.debug("%s: Unlocking storage..." % store)
+                store.unlock()
 
