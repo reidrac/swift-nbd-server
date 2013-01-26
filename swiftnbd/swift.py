@@ -44,7 +44,6 @@ class SwiftStorage(object):
 
     May raise StorageError (IOError).
     """
-    cache = None
 
     def __init__(self, authurl, username, password, container, object_size, objects, cache=None):
         self.container = container
