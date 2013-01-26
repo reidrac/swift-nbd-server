@@ -27,6 +27,9 @@ The block device can be used only by one location at once. When a client is conn
 the container used as storage is marked as *locked* by adding metadata information to the container
 until the client disconnects and the container can be unlocked.
 
+The server implements the new version of the NBD protocol and nbd-client 3.1 or later is highly
+recommended. For older versions of the protocol (nbd-client <= 2.9.16), please use the swiftnbd 0.9.4.
+
 References:
 
 - OpenStack Object Storage: http://www.openstack.org/software/openstack-storage/
@@ -54,10 +57,8 @@ Alternatively you can install it with pip::
     pip install swiftnbd
 
 
-Usage
-=====
-
-**Important**: this documentation is valid for 0.9.4.
+Quickstart
+==========
 
 A container needs to be setup with swiftnbd-ctl to be used by the server. First create
 a *secrets.conf* file::
@@ -76,25 +77,26 @@ and the maximum number of objects you want to allocate as second parameter::
 
     swiftnbd-ctl setup container-name number-of-objects
 
-For example, setup a 1GB storage in myndb0 container::
+For example, to setup a 1GB storage in myndb0 container::
 
     swiftnbd-ctl setup mynbd0 16384
 
-By default the objects stored in swift by the server are 64KB, so 16384 * 65536 is 1GB.
+By default the objects stored by the server are 64KB, so 16384 * 65536 is 1GB.
 
 After the container is setup, it can be served with swiftnbd-server::
 
-    swiftnbd-server container-name
+    swiftnbd-server
 
 For debugging purposes the *-vf* flag is recommended (verbose and foreground).
 
-The server implements a local cache that by default is limited to 64 MB. That value can
-be configured using the *-c* flag indicating the max amount of memory to be used (in MB).
+The server implements a local cache that by default is limited to 64 MB per container.
+That value can be configured using the *-c* flag indicating the max amount of memory to
+be used (in MB).
 
 Once the server is running, nbd-client can be used to create the block device (as root)::
 
     modprobe nbd
-    nbd-client 127.0.0.1 10811 /dev/nbd0
+    nbd-client -N container-name 127.0.0.1 /dev/nbd0
 
 Then */dev/nbd0* can be used as a regular block device, ie::
 
@@ -106,16 +108,21 @@ Before stopping the server, be sure you unmount the device and stop the NBD clie
     umount /mnt
     nbd-client -d /dev/nbd0
 
+The server will export *all* the containers listed in the *secrets* file. The list of
+exported container can be verified with the NBD client *-list* option (version >= 3.1)::
+
+    nbd-client -list 127.0.0.1
+
 Please check *--help* for further details.
 
 
-Control tool
-------------
+The control tool
+----------------
 
 siwftnbd-ctl is used to perform different maintenance operations on the containers. It
-communicates directly with the object storage.
+communicates directly with the object storage (the NBD server is not used).
 
-To list the containers in the *secrets* file::
+To obtain the details of the containers listed in the *secrets* file::
 
     swiftnbd-ctl list -s
 
