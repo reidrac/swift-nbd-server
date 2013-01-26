@@ -27,6 +27,54 @@ from logging.handlers import SysLogHandler
 import os
 from ConfigParser import RawConfigParser
 
+class Stats(object):
+    """Store and log stats."""
+    def __init__(self, store):
+        self.store = store
+
+        self.bytes_in = 0
+        self.bytes_out = 0
+        self.log = logging.getLogger(__package__)
+
+    def log_stats(self):
+        """Log stats."""
+        self.log.info("STATS: %s in=%s (%s), out=%s (%s)" % (self.store,
+                                                             self.bytes_in,
+                                                             self.store.bytes_out,
+                                                             self.bytes_out,
+                                                             self.store.bytes_in,
+                                                             ))
+
+        cache = len(self.store.cache) * self.store.object_size
+        limit = self.store.cache.limit * self.store.object_size
+        self.log.info("CACHE: %s size=%s, limit=%s (%.2f%%)" % (self.store, cache, limit, (cache*100.0/limit)))
+
+class Credentials(object):
+    """Credentials for accessing a container."""
+
+    default_authurl = None
+
+    def __init__(self, username, password, authurl):
+        self.username = username
+        self.password = password
+        self.authurl = authurl if authurl else Credentials.default_authurl
+
+    def as_tuple(self):
+        return (self.username, self.password, self.authurl)
+
+def getAllSecrets(secrets_file):
+    """Read secrets for all containers"""
+    conf = RawConfigParser(dict(username=None, password=None, authurl=None))
+    conf.read(secrets_file)
+
+    containers = dict()
+    for container in conf.sections():
+        containers[container] = Credentials(conf.get(container, 'username'),
+                                            conf.get(container, 'password'),
+                                            conf.get(container, 'authurl'),
+                                            )
+    return containers
+
 def getSecrets(container, secrets_file):
     """Read secrets"""
     stat = os.stat(secrets_file)
@@ -40,10 +88,10 @@ def getSecrets(container, secrets_file):
     if not conf.has_section(container):
         raise ValueError("%s not found in %s" % (container, secrets_file))
 
-    return (conf.get(container, 'username'),
-            conf.get(container, 'password'),
-            conf.get(container, 'authurl'),
-            )
+    return Credentials(conf.get(container, 'username'),
+                       conf.get(container, 'password'),
+                       conf.get(container, 'authurl'),
+                       )
 
 def getContainers(secrets_file):
     """Return a list of containers read from a secrets file"""
