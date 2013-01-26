@@ -1,2 +1,6 @@
 - More tests
+- Better documentation
+- Read only exports
+- Per container cache limit
+- Set a container offline without restarting the server
 
