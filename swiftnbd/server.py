@@ -36,13 +36,30 @@ class Server(StreamServer):
     """
 
     # NBD's magic
-    NBD_HANDSHAKE = "NBDMAGIC\x00\x00\x42\x02\x81\x86\x12\x53"
-    NBD_RESPONSE = "\x67\x44\x66\x98"
+    NBD_HANDSHAKE = 0x49484156454F5054
+    NBD_REPLY = 0x3e889045565a9
+
+    NBD_REQUEST = 0x25609513
+    NBD_RESPONSE = 0x67446698
+
+    NBD_OPT_EXPORTNAME = 1
+    NBD_OPT_ABORT = 2
+    NBD_OPT_LIST = 3
+
+    NBD_REP_ACK = 1
+    NBD_REP_SERVER = 2
+    NBD_REP_ERR_UNSUP = 2**31 + 1
 
     NBD_CMD_READ = 0
     NBD_CMD_WRITE = 1
     NBD_CMD_DISC = 2
     NBD_CMD_FLUSH = 3
+
+    # fixed newstyle handshake
+    NBD_HANDSHAKE_FLAGS = (1 << 0)
+
+    # has flags, supports flush
+    NBD_EXPORT_FLAGS = (1 << 0) ^ (1 << 2)
 
     def __init__(self, listener, store):
         super(Server, self).__init__(listener)
@@ -71,7 +88,7 @@ class Server(StreamServer):
         spawn_later(stats_delay, self.log_stats)
 
     def nbd_response(self, fob, handle, error=0, data=None):
-        fob.write(self.NBD_RESPONSE + struct.pack('>L', error) + struct.pack(">Q", handle))
+        fob.write(struct.pack('>LLQ', self.NBD_RESPONSE, error, handle))
         if data:
             fob.write(data)
         fob.flush()
@@ -81,82 +98,159 @@ class Server(StreamServer):
         self.log.info("Incoming connection from %s:%s" % address)
 
         try:
-            self.store.lock("%s:%s" % address)
-        except IOError as ex:
-            self.log.error("[%s:%s]: %s" % (host, port, ex))
-            socket.close()
-            return
+            fob = socket.makefile()
 
-        fob = socket.makefile()
+            # initial handshake
+            fob.write("NBDMAGIC" + struct.pack(">QH", self.NBD_HANDSHAKE, self.NBD_HANDSHAKE_FLAGS))
+            fob.flush()
 
-        # initial handshake (old-style)
-        fob.write(self.NBD_HANDSHAKE + struct.pack('>Q', self.store.size) + "\x00"*128)
-        fob.flush()
-
-        while True:
-            header = fob.read(28)
+            data = fob.read(4)
             try:
-                (magic, cmd, handle, offset, length) = struct.unpack(">LLQQL", header)
+                client_flag = struct.unpack(">L", data)[0]
             except struct.error:
-                self.log.error("[%s:%s]: Invalid request, disconnecting" % address)
-                break
+                raise IOError("Handshake failed, disconnecting")
 
-            if magic != 0x25609513:
-                self.log.error("[%s:%s]: Wrong magic number, disconnecting" % address)
-                break
+            # we support both fixed and unfixed new-style handshake
+            if client_flag == 0:
+                fixed = False
+                self.log.warning("Client using new-style non-fixed handshake")
+            elif client_flag & 1 == 1:
+                fixed = True
+            else:
+                raise IOError("Handshake failed, disconnecting")
 
-            self.log.debug("[%s:%s]: cmd=%s, handle=%s, offset=%s, len=%s" % (host, port, cmd, handle, offset, length))
+            # negotiation phase
+            while True:
+                header = fob.read(16)
+                try:
+                    (magic, opt, length) = struct.unpack(">QLL", header)
+                except struct.error:
+                    raise IOError("Negotiation failed: Invalid request, disconnecting")
 
-            if cmd == self.NBD_CMD_DISC:
+                if magic != self.NBD_HANDSHAKE:
+                    raise IOError("Negotiation failed: bad magic number: %s" % magic)
 
-                self.log.info("[%s:%s]: disconnecting" % address)
-                break
+                if length:
+                    data = fob.read(length)
+                    if(len(data) != length):
+                        raise IOError("Negotiation failed: %s bytes expected" % length)
+                else:
+                    data = None
 
-            elif cmd == self.NBD_CMD_WRITE:
+                self.log.debug("[%s:%s]: opt=%s, len=%s, data=%s" % (host, port, opt, length, data))
 
-                data = fob.read(length)
-                if(len(data) != length):
-                    self.log.error("[%s:%s]: %s bytes expected, disconnecting" % (host, port, length))
+                if opt == self.NBD_OPT_EXPORTNAME:
+
+                    if not data:
+                        raise IOError("Negotiation failed: no export name was provided")
+
+                    if data != self.store.container:
+                        if not fixed:
+                            raise IOError("Negotiation failed: unknown export name")
+
+                        fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_ERR_UNSUP, 0))
+                        fob.flush()
+                        continue
+
+                    self.store.lock("%s:%s" % address)
+
+                    fob.write(struct.pack('>QH', self.store.size, self.NBD_EXPORT_FLAGS) + "\x00"*124)
+                    fob.flush()
                     break
 
+                elif opt == self.NBD_OPT_LIST:
+
+                    export = self.store.container
+                    fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_SERVER, len(export) + 4))
+                    fob.write(struct.pack(">L", len(export)) + export)
+                    fob.flush()
+
+                    fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_ACK, 0))
+                    fob.flush()
+
+                elif opt == self.NBD_OPT_ABORT:
+
+                    fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_ACK, 0))
+                    fob.flush()
+
+                    raise IOError("Client aborted negotiation")
+
+                else:
+                    # we don't support any other option
+                    if not fixed:
+                        raise IOError("Unsupported option")
+
+                    fob.write(struct.pack(">QLLL", self.NBD_REPLY, opt, self.NBD_REP_ERR_UNSUP, 0))
+                    fob.flush()
+
+            # operation phase
+            while True:
+                header = fob.read(28)
                 try:
-                    self.store.seek(offset)
-                    self.store.write(data)
-                except IOError as ex:
-                    self.log.error("[%s:%s]: %s" % (host, port, ex))
-                    self.nbd_response(fob, handle, error=ex.errno)
-                    continue
+                    (magic, cmd, handle, offset, length) = struct.unpack(">LLQQL", header)
+                except struct.error:
+                    raise IOError("Invalid request, disconnecting")
 
-                self.bytes_in += length
-                self.nbd_response(fob, handle)
+                if magic != self.NBD_REQUEST:
+                    raise IOError("Bad magic number, disconnecting")
 
-            elif cmd == self.NBD_CMD_READ:
+                self.log.debug("[%s:%s]: cmd=%s, handle=%s, offset=%s, len=%s" % (host, port, cmd, handle, offset, length))
 
-                try:
-                    self.store.seek(offset)
-                    data = self.store.read(length)
-                except IOError as ex:
-                    self.log.error("[%s:%s]: %s" % (host, port, ex))
-                    self.nbd_response(fob, handle, error=ex.errno)
-                    continue
+                if cmd == self.NBD_CMD_DISC:
 
-                if data:
-                    self.bytes_out += len(data)
-                self.nbd_response(fob, handle, data=data)
+                    self.log.info("[%s:%s]: disconnecting" % address)
+                    break
 
-            elif cmd == self.NBD_CMD_FLUSH:
+                elif cmd == self.NBD_CMD_WRITE:
 
-                self.store.flush()
-                self.nbd_response(fob, handle)
+                    data = fob.read(length)
+                    if(len(data) != length):
+                        raise IOError("%s bytes expected, disconnecting" % length)
 
-            else:
+                    try:
+                        self.store.seek(offset)
+                        self.store.write(data)
+                    except IOError as ex:
+                        self.log.error("[%s:%s]: %s" % (host, port, ex))
+                        self.nbd_response(fob, handle, error=ex.errno)
+                        continue
 
-                self.log.warning("[%s:%s]: Unknown cmd %s, disconnecting" % (host, port, cmd))
-                break
+                    self.bytes_in += length
+                    self.nbd_response(fob, handle)
 
-        try:
-            self.store.unlock()
+                elif cmd == self.NBD_CMD_READ:
+
+                    try:
+                        self.store.seek(offset)
+                        data = self.store.read(length)
+                    except IOError as ex:
+                        self.log.error("[%s:%s]: %s" % (host, port, ex))
+                        self.nbd_response(fob, handle, error=ex.errno)
+                        continue
+
+                    if data:
+                        self.bytes_out += len(data)
+                    self.nbd_response(fob, handle, data=data)
+
+                elif cmd == self.NBD_CMD_FLUSH:
+
+                    self.store.flush()
+                    self.nbd_response(fob, handle)
+
+                else:
+
+                    self.log.warning("[%s:%s]: Unknown cmd %s, disconnecting" % (host, port, cmd))
+                    break
+
         except IOError as ex:
-            self.log.error(ex)
-        socket.close()
+            self.log.error("[%s:%s]: %s" % (host, port, ex))
+
+        finally:
+
+            try:
+                self.store.unlock()
+            except IOError as ex:
+                self.log.error(ex)
+
+            socket.close()
 
