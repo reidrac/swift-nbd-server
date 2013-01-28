@@ -45,13 +45,14 @@ class SwiftStorage(object):
     May raise StorageError (IOError).
     """
 
-    def __init__(self, authurl, username, password, container, object_size, objects, cache=None):
+    def __init__(self, authurl, username, password, container, object_size, objects, cache=None, read_only=False):
         self.container = container
         self.object_size = object_size
         self.objects = objects
         self.pos = 0
         self.locked = False
         self.meta = dict()
+        self.read_only = read_only
 
         self.bytes_in = 0
         self.bytes_out = 0
@@ -125,6 +126,9 @@ class SwiftStorage(object):
         return data
 
     def write(self, data):
+        if self.read_only:
+            raise StorageError(errno.EROFS, "Read only storage")
+
         _data = data[:]
         if self.object_pos != 0:
             # object-align the beginning of data
