@@ -108,7 +108,10 @@ class Main(object):
         self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog, use_file=self.args.log_file)
 
         Credentials.default_authurl = self.args.authurl
-        self.containers = getAllSecrets(self.args.secrets_file)
+        try:
+            self.containers = getAllSecrets(self.args.secrets_file)
+        except ValueError as ex:
+            parser.error("Failed to load secrets: %s" % ex)
 
     def run(self):
 
@@ -156,6 +159,7 @@ class Main(object):
                                              object_size,
                                              objects,
                                              Cache(int(self.args.cache_limit*1024**2 / object_size)),
+                                             cred.read_only,
                                             )
 
         addr = (self.args.bind_address, self.args.bind_port)
