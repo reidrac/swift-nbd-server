@@ -61,6 +61,7 @@ class Server(StreamServer):
 
     # has flags, supports flush
     NBD_EXPORT_FLAGS = (1 << 0) ^ (1 << 2)
+    NBD_RO_FLAG = (1 << 1)
 
     def __init__(self, listener, stores):
         super(Server, self).__init__(listener)
@@ -157,7 +158,11 @@ class Server(StreamServer):
 
                     self.log.info("[%s:%s] Negotiated export: %s" % (host, port, store.container))
 
-                    fob.write(struct.pack('>QH', store.size, self.NBD_EXPORT_FLAGS) + "\x00"*124)
+                    export_flags = self.NBD_EXPORT_FLAGS
+                    if store.read_only:
+                        export_flags ^= self.NBD_RO_FLAG
+                        self.log.info("[%s:%s] %s is read only" % (host, port, store.container))
+                    fob.write(struct.pack('>QH', store.size, export_flags) + "\x00"*124)
                     fob.flush()
                     break
 
