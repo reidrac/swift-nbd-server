@@ -54,17 +54,20 @@ class Credentials(object):
 
     default_authurl = None
 
-    def __init__(self, username, password, authurl):
+    def __init__(self, username, password, authurl, read_only):
         self.username = username
         self.password = password
-        self.authurl = authurl if authurl else Credentials.default_authurl
+        self.authurl = authurl or Credentials.default_authurl
+        self.read_only = read_only
 
     def as_tuple(self):
         return (self.username, self.password, self.authurl)
 
+_CONF_DEFAULTS = { 'username': None, 'password': None, 'authurl': None, 'read-only': '0', }
+
 def getAllSecrets(secrets_file):
     """Read secrets for all containers"""
-    conf = RawConfigParser(dict(username=None, password=None, authurl=None))
+    conf = RawConfigParser(_CONF_DEFAULTS)
     conf.read(secrets_file)
 
     containers = dict()
@@ -72,6 +75,7 @@ def getAllSecrets(secrets_file):
         containers[container] = Credentials(conf.get(container, 'username'),
                                             conf.get(container, 'password'),
                                             conf.get(container, 'authurl'),
+                                            conf.getboolean(container, 'read-only')
                                             )
     return containers
 
@@ -82,7 +86,7 @@ def getSecrets(container, secrets_file):
         log = logging.getLogger(__package__)
         log.warning("%s is world readable, please consider changing its permissions to 0600" % secrets_file)
 
-    conf = RawConfigParser(dict(username=None, password=None, authurl=None))
+    conf = RawConfigParser(_CONF_DEFAULTS)
     conf.read(secrets_file)
 
     if not conf.has_section(container):
@@ -91,13 +95,13 @@ def getSecrets(container, secrets_file):
     return Credentials(conf.get(container, 'username'),
                        conf.get(container, 'password'),
                        conf.get(container, 'authurl'),
+                       conf.getboolean(container, 'read-only')
                        )
 
 def getContainers(secrets_file):
     """Return a list of containers read from a secrets file"""
-    conf = RawConfigParser(dict(username=None, password=None, authurl=None))
+    conf = RawConfigParser(_CONF_DEFAULTS)
     conf.read(secrets_file)
-
     return conf.sections()
 
 def setLog(debug=False, use_syslog=False, use_file=None):
