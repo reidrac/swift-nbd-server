@@ -33,7 +33,7 @@ import gevent
 from swiftclient import client
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
-from swiftnbd.common import setLog, getMeta, getAllSecrets, Credentials
+from swiftnbd.common import setLog, getMeta, Config
 from swiftnbd.cache import Cache
 from swiftnbd.swift import SwiftStorage
 from swiftnbd.server import Server
@@ -107,10 +107,9 @@ class Main(object):
 
         self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog, use_file=self.args.log_file)
 
-        Credentials.default_authurl = self.args.authurl
         try:
-            self.containers = getAllSecrets(self.args.secrets_file)
-        except ValueError as ex:
+            self.conf = Config(self.args.secrets_file, self.args.authurl)
+        except OSError as ex:
             parser.error("Failed to load secrets: %s" % ex)
 
     def run(self):
@@ -120,8 +119,8 @@ class Main(object):
             return 1
 
         stores = dict()
-        for container, cred in self.containers.iteritems():
-            cli = client.Connection(cred.authurl, cred.username, cred.password)
+        for container, values in self.conf.iteritems():
+            cli = client.Connection(values['authurl'], values['username'], values['password'])
 
             try:
                 headers, _ = cli.get_container(container)
@@ -152,14 +151,14 @@ class Main(object):
             if meta['version'] != disk_version:
                 self.log.warning("Version mismatch %s != %s in %s" % (meta['version'], disk_version, container))
 
-            stores[container] = SwiftStorage(cred.authurl,
-                                             cred.username,
-                                             cred.password,
+            stores[container] = SwiftStorage(values['authurl'],
+                                             values['username'],
+                                             values['password'],
                                              container,
                                              object_size,
                                              objects,
                                              Cache(int(self.args.cache_limit*1024**2 / object_size)),
-                                             cred.read_only,
+                                             values['read-only'],
                                             )
 
         addr = (self.args.bind_address, self.args.bind_port)

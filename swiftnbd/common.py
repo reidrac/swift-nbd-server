@@ -49,60 +49,57 @@ class Stats(object):
         limit = self.store.cache.limit * self.store.object_size
         self.log.info("CACHE: %s size=%s, limit=%s (%.2f%%)" % (self.store, cache, limit, (cache*100.0/limit)))
 
-class Credentials(object):
-    """Credentials for accessing a container."""
+class Config(object):
+    """Manage configuration read from a secrets file."""
 
-    default_authurl = None
+    DEFAULTS = { 'username': None,
+                 'password': None,
+                 'authurl': None,
+                 'read-only': '0',
+                 }
 
-    def __init__(self, username, password, authurl, read_only):
-        self.username = username
-        self.password = password
-        self.authurl = authurl or Credentials.default_authurl
-        self.read_only = read_only
+    def __init__(self, secrets_file, default_authurl=None):
+        """
+        Read configuration from the secrets file.
 
-    def as_tuple(self):
-        return (self.username, self.password, self.authurl)
+        A default_authurl can be provided.
+        """
+        if default_authurl:
+            Config.DEFAULTS['authurl'] = default_authurl
 
-_CONF_DEFAULTS = { 'username': None, 'password': None, 'authurl': None, 'read-only': '0', }
+        stat = os.stat(secrets_file)
+        if stat.st_mode & 0x004 != 0:
+            log = logging.getLogger(__package__)
+            log.warning("%s is world readable, please consider changing its permissions to 0600" % secrets_file)
 
-def getAllSecrets(secrets_file):
-    """Read secrets for all containers"""
-    conf = RawConfigParser(_CONF_DEFAULTS)
-    conf.read(secrets_file)
+        self.secrets_file = secrets_file
+        self.conf = RawConfigParser(Config.DEFAULTS)
+        self.conf.read(secrets_file)
 
-    containers = dict()
-    for container in conf.sections():
-        containers[container] = Credentials(conf.get(container, 'username'),
-                                            conf.get(container, 'password'),
-                                            conf.get(container, 'authurl'),
-                                            conf.getboolean(container, 'read-only')
-                                            )
-    return containers
+    def iteritems(self):
+        """
+        Generator that returns pairs of container name and a dictionary with the values
+        associated to that contaiener.
 
-def getSecrets(container, secrets_file):
-    """Read secrets"""
-    stat = os.stat(secrets_file)
-    if stat.st_mode & 0x004 != 0:
-        log = logging.getLogger(__package__)
-        log.warning("%s is world readable, please consider changing its permissions to 0600" % secrets_file)
+        See Config.DEFAULTS for the valid values.
+        """
+        for name in self.list_containers():
+            yield name, self.get_container(name)
 
-    conf = RawConfigParser(_CONF_DEFAULTS)
-    conf.read(secrets_file)
+    def get_container(self, name):
+        """
+        Get a dictionary with the values associated to a container.
 
-    if not conf.has_section(container):
-        raise ValueError("%s not found in %s" % (container, secrets_file))
+        See Config.DEFAULTS for the valid values.
+        """
+        if not self.conf.has_section(name):
+            raise ValueError("%s not found in %s" % (name, self.secrets_file))
 
-    return Credentials(conf.get(container, 'username'),
-                       conf.get(container, 'password'),
-                       conf.get(container, 'authurl'),
-                       conf.getboolean(container, 'read-only')
-                       )
+        return dict(self.conf.items(name))
 
-def getContainers(secrets_file):
-    """Return a list of containers read from a secrets file"""
-    conf = RawConfigParser(_CONF_DEFAULTS)
-    conf.read(secrets_file)
-    return conf.sections()
+    def list_containers(self):
+        """List all container names."""
+        return self.conf.sections()
 
 def setLog(debug=False, use_syslog=False, use_file=None):
     """Setup logger"""

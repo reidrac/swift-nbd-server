@@ -30,7 +30,7 @@ from argparse import ArgumentParser
 from swiftclient import client
 
 from swiftnbd.const import version, project_url, auth_url, object_size, secrets_file, disk_version
-from swiftnbd.common import setLog, setMeta, getMeta, getSecrets, getContainers, Credentials
+from swiftnbd.common import setLog, setMeta, getMeta, Config
 from swiftnbd.swift import SwiftStorage, StorageError
 
 class Main(object):
@@ -97,6 +97,11 @@ class Main(object):
 
         self.log = setLog(debug=self.args.verbose)
 
+        try:
+            self.conf = Config(self.args.secrets_file, self.args.authurl)
+        except OSError as ex:
+            parser.error("Failed to load secrets: %s" % ex)
+
         # setup by _setup_client()
         self.authurl = None
         self.username = None
@@ -114,21 +119,16 @@ class Main(object):
         else:
             out = self.log.info
 
-        containers = getContainers(self.args.secrets_file)
-
-        Credentials.default_authurl = self.args.authurl
         prev_authurl = None
-        for cont in containers:
-            cred = getSecrets(cont, self.args.secrets_file)
-
-            if prev_authurl or prev_authurl != cred.authurl:
-                cli = client.Connection(cred.authurl, cred.username, cred.password)
+        for container, values in self.conf.iteritems():
+            if prev_authurl or prev_authurl != values['authurl']:
+                cli = client.Connection(values['authurl'], values['username'], values['password'])
 
             try:
-                headers, _ = cli.get_container(cont)
+                headers, _ = cli.get_container(container)
             except (socket.error, client.ClientException) as ex:
                 if getattr(ex, 'http_status', None) == 404:
-                    self.log.error("%s doesn't exist (auth-url: %s)" % (cont, cred.authurl))
+                    self.log.error("%s doesn't exist (auth-url: %s)" % (container, values['authurl']))
                 else:
                     self.log.error(ex)
             else:
@@ -138,16 +138,16 @@ class Main(object):
 
                 if meta:
                     lock = "unlocked" if not 'client' in meta else "locked by %s" % meta['client']
-                    out("%s objects=%s size=%s (version=%s, %s)" % (cont,
+                    out("%s objects=%s size=%s (version=%s, %s)" % (container,
                                                                     meta['objects'],
                                                                     meta['object-size'],
                                                                     meta['version'],
                                                                     lock,
                                                                     ))
                 else:
-                    out("%s is not a swiftnbd container" % cont)
+                    out("%s is not a swiftnbd container" % container)
 
-            prev_authurl = cred.authurl
+            prev_authurl = values['authurl']
 
         return 0
 
@@ -161,12 +161,15 @@ class Main(object):
         Returns a client connection, metadata tuple or (None, None) on error.
         """
 
-        Credentials.default_authurl = self.args.authurl
         try:
-            self.username, self.password, self.authurl = getSecrets(self.args.container, self.args.secrets_file).as_tuple()
+            values = self.conf.get_container(self.args.container)
         except ValueError as ex:
             self.log.error(ex)
             return (None, None)
+
+        self.authurl = values['authurl']
+        self.username = values['username']
+        self.password = values['password']
 
         cli = client.Connection(self.authurl, self.username, self.password)
 
