@@ -206,7 +206,7 @@ class Server(StreamServer):
 
                 if cmd == self.NBD_CMD_DISC:
 
-                    self.log.info("[%s:%s]: disconnecting" % address)
+                    self.log.info("[%s:%s] disconnecting" % address)
                     break
 
                 elif cmd == self.NBD_CMD_WRITE:
@@ -219,7 +219,7 @@ class Server(StreamServer):
                         store.seek(offset)
                         store.write(data)
                     except IOError as ex:
-                        self.log.error("[%s:%s]: %s" % (host, port, ex))
+                        self.log.error("[%s:%s] %s" % (host, port, ex))
                         self.nbd_response(fob, handle, error=ex.errno)
                         continue
 
@@ -232,7 +232,7 @@ class Server(StreamServer):
                         store.seek(offset)
                         data = store.read(length)
                     except IOError as ex:
-                        self.log.error("[%s:%s]: %s" % (host, port, ex))
+                        self.log.error("[%s:%s] %s" % (host, port, ex))
                         self.nbd_response(fob, handle, error=ex.errno)
                         continue
 
@@ -247,11 +247,11 @@ class Server(StreamServer):
 
                 else:
 
-                    self.log.warning("[%s:%s]: Unknown cmd %s, disconnecting" % (host, port, cmd))
+                    self.log.warning("[%s:%s] Unknown cmd %s, disconnecting" % (host, port, cmd))
                     break
 
         except IOError as ex:
-            self.log.error("[%s:%s]: %s" % (host, port, ex))
+            self.log.error("[%s:%s] %s" % (host, port, ex))
 
         finally:
             if store:
