@@ -25,7 +25,7 @@ THE SOFTWARE.
 import unittest
 
 class CacheTestCase(unittest.TestCase):
-    """Test the object-split file class."""
+    """Test the cache class."""
     def setUp(self):
         from swiftnbd.cache import Cache
         self.cache = Cache(10)
