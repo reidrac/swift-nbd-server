@@ -30,4 +30,7 @@ setup(name="swiftnbd",
         "Environment :: No Input/Output (Daemon)",
         "License :: OSI Approved :: MIT License",
         ],
+      keywords="openstack object storage swift nbd",
+      tests_require=["nose",],
+      test_suite="nose.collector",
       )
