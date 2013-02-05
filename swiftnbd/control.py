@@ -25,6 +25,7 @@ THE SOFTWARE.
 from __future__ import print_function
 import socket
 import sys
+from time import time
 from argparse import ArgumentParser
 
 from swiftclient import client
@@ -65,6 +66,10 @@ class Main(object):
         p = subp.add_parser('unlock', help='unlock a container')
         p.add_argument("container", help="container to unlock")
         p.set_defaults(func=self.do_unlock)
+
+        p = subp.add_parser('lock', help='lock a container')
+        p.add_argument("container", help="container to lock")
+        p.set_defaults(func=self.do_lock)
 
         p = subp.add_parser('download', help='download a container as a raw image')
         p.add_argument("container", help="container to download")
@@ -221,6 +226,31 @@ class Main(object):
             return 1
 
         self.log.info("Done, %s is unlocked" % self.args.container)
+
+        return 0
+
+    def do_lock(self):
+
+        self.log.debug("locking %s" % self.args.container)
+
+        cli, meta = self._setup_client()
+        if cli is None:
+            return 1
+        elif 'client' in meta:
+            self.log.warning("%s is already locked: %s" % (self.args.container, meta['client']))
+            return 1
+
+        meta.update(client='ctl@%i' % time())
+        hdrs = setMeta(meta)
+        self.log.debug("Meta headers: %s" % hdrs)
+
+        try:
+            cli.put_container(self.args.container, headers=hdrs)
+        except client.ClientException as ex:
+            self.log.error(ex)
+            return 1
+
+        self.log.info("Done, %s is locked" % self.args.container)
 
         return 0
 

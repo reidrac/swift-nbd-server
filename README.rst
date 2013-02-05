@@ -136,6 +136,10 @@ To unlock a locked container::
 
     swiftnbd-ctl unlock container-name
 
+To lock a container preventing it to be used by any client::
+
+    swiftnbd-ctl lock container-name
+
 To download a container into a local disk image (the resulting disk image can be
 mounted using a loop device)::
 
