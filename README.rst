@@ -68,6 +68,10 @@ a *secrets.conf* file::
     password = pass
 
 Optionally an *authurl* token can be used to specify an authentication URL per container.
+A container can be exported write protected with *read-only* token set to 1 (by default all
+containers are exported read-write).
+
+Please see *secrets.conf.example* for a commented example.
 
 The default location for the *secrets* is */etc/swiftnbd/secrets.conf*, and an alternative
 location can be provided using *--secrets* flag.
