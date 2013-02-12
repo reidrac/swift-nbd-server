@@ -1,3 +1,12 @@
+2013-02-12 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.9.6:
+
+     - explicit-lock containers
+     - read-only exports (new config token)
+	 - updated doc
+	 - "setup.py test" works now
+
 2013-01-26 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9.5:
