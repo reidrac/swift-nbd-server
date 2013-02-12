@@ -4,15 +4,15 @@
 
      - explicit-lock containers
      - read-only exports (new config token)
-	 - updated doc
-	 - "setup.py test" works now
+     - updated doc
+     - "setup.py test" works now
 
 2013-01-26 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9.5:
 
      - upgraded to newest NBD protocol, requires nbd-client >= 2.9.18 (3.1+ recommended)
-	 - support for export negotiation and listing exports
+     - support for export negotiation and listing exports
      - export all containers listed in secrets file
      - cache per container
      - minor bug fixes, new bugs introduced!
@@ -25,8 +25,8 @@
      - swiftnbd-setup has been replaced by swiftnbd-ctl setup
      - swiftnbd-ctl now returns different than 0 on error
 
-	 Note: this is the last version supporting the old NBD protocol,
-	 required for nbd-client <= 2.9.16.
+     Note: this is the last version supporting the old NBD protocol,
+     required for nbd-client <= 2.9.16.
 
 2013-01-21 Juan J. Martinez <jjm@usebox.net>
 
