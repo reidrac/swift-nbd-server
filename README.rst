@@ -28,7 +28,7 @@ the container used as storage is marked as *locked* by adding metadata informati
 until the client disconnects and the container can be unlocked.
 
 The server implements the new version of the NBD protocol and nbd-client 3.1 or later is highly
-recommended. For older versions of the protocol (nbd-client <= 2.9.16), please use the swiftnbd 0.9.4.
+recommended. For older versions of the protocol (nbd-client <= 2.9.16), please use swiftnbd 0.9.4.
 
 References:
 
