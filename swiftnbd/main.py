@@ -158,7 +158,7 @@ class Main(object):
                                              object_size,
                                              objects,
                                              Cache(int(self.args.cache_limit*1024**2 / object_size)),
-                                             values['read-only'],
+                                             values['read-only'].lower() in ('1', 'yes', 'true', 'on'),
                                             )
 
         addr = (self.args.bind_address, self.args.bind_port)
