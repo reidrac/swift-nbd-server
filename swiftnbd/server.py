@@ -151,7 +151,7 @@ class Server(StreamServer):
                         continue
 
                     # we have negotiated a store and it will be used
-                    # until the client disonnects
+                    # until the client disconnects
                     store = self.stores[data]
 
                     store.lock("%s:%s" % address)
