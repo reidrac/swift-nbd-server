@@ -67,7 +67,7 @@ class Main(object):
         parser.add_argument("-p", "--bind-port", dest="bind_port",
                             type=int,
                             default=10809,
-                            help="bind address (default: 10811)")
+                            help="bind address (default: 10809)")
 
         parser.add_argument("-c", "--cache-limit", dest="cache_limit",
                             type=int,
