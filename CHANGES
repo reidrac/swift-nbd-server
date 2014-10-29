@@ -1,3 +1,9 @@
+2014-10-29 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.9.8:
+
+     - fixed a bug that prevented the server to work with gevent >= 1.0
+
 2013-06-29 Juan J. Martinez <jjm@usebox.net>
 
    * 0.9.7:
