@@ -64,7 +64,7 @@ class Server(StreamServer):
     NBD_RO_FLAG = (1 << 1)
 
     def __init__(self, listener, stores):
-        super(Server, self).__init__(listener)
+        super(Server, self).__init__(listener, handle=self.handler)
 
         self.log = logging.getLogger(__package__)
 
@@ -74,8 +74,6 @@ class Server(StreamServer):
         for store in self.stores.values():
             self.stats[store] = Stats(store)
         self.log_stats()
-
-        self.set_handle(self.handler)
 
     def log_stats(self):
         """Log periodically server stats"""
