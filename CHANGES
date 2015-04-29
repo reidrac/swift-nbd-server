@@ -2,13 +2,13 @@
 
    * 0.10.1:
 
-	 - fixes in setup.py
+     - fixes in setup.py
 
 2015-04-29 Juan J. Martinez <jjm@usebox.net>
 
    * 0.10:
 
-	 - code ported to Python 3.3+ and asyncio to replace gevent
+     - code ported to Python 3.3+ and asyncio to replace gevent
 
 2014-10-29 Juan J. Martinez <jjm@usebox.net>
 
