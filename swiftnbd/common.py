@@ -25,7 +25,8 @@ THE SOFTWARE.
 import logging
 from logging.handlers import SysLogHandler
 import os
-from ConfigParser import RawConfigParser
+
+from configparser import RawConfigParser
 
 class Stats(object):
     """Store and log stats."""
@@ -76,7 +77,7 @@ class Config(object):
         self.conf = RawConfigParser(Config.DEFAULTS)
         self.conf.read(secrets_file)
 
-    def iteritems(self):
+    def items(self):
         """
         Generator that returns pairs of container name and a dictionary with the values
         associated to that contaiener.
@@ -134,11 +135,11 @@ _META_REQUIRED = ('version', 'objects', 'object-size')
 
 def setMeta(meta):
     """Convert a metada dict into swift meta headers"""
-    return dict(("%s%s" % (_META_PREFIX, key), value) for key, value in meta.iteritems())
+    return dict(("%s%s" % (_META_PREFIX, key), value) for key, value in meta.items())
 
 def getMeta(hdrs):
     """Convert swift meta headers with swiftndb prefix into a dictionary"""
-    data = dict((key[len(_META_PREFIX):], value) for key, value in hdrs.iteritems() if key.lower().startswith(_META_PREFIX))
+    data = dict((key[len(_META_PREFIX):], value) for key, value in hdrs.items() if key.lower().startswith(_META_PREFIX))
     for key in _META_REQUIRED:
         if key not in data:
             return dict()

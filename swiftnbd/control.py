@@ -42,6 +42,8 @@ class Main(object):
                                 )
 
         subp = parser.add_subparsers(title="commands")
+        subp.required = True
+        subp.dest = "command"
 
         p = subp.add_parser('list', help='list all containers and their information')
         p.add_argument("-s", "--simple-output", dest="simple",
@@ -125,7 +127,7 @@ class Main(object):
             out = self.log.info
 
         prev_authurl = None
-        for container, values in self.conf.iteritems():
+        for container, values in self.conf.items():
             if prev_authurl or prev_authurl != values['authurl']:
                 cli = client.Connection(values['authurl'], values['username'], values['password'])
 

@@ -24,7 +24,6 @@ THE SOFTWARE.
 
 import errno
 from time import time
-from cStringIO import StringIO
 from hashlib import md5
 import socket
 
@@ -59,7 +58,7 @@ class SwiftStorage(object):
 
         self.cache = cache
         if self.cache is None:
-            self.cache = Cache(int(1024**2 / self.object_size))
+            self.cache = Cache(1024**2 // self.object_size)
 
         self.cli = client.Connection(authurl, username, password)
 
@@ -106,11 +105,11 @@ class SwiftStorage(object):
         self.locked = False
 
     def read(self, size):
-        data = ""
+        data = bytearray()
         _size = size
         while _size > 0:
             obj = self.fetch_object(self.object_num)
-            if obj == '':
+            if obj == b'':
                 break
 
             if _size + self.object_pos >= self.object_size:
@@ -139,7 +138,7 @@ class SwiftStorage(object):
         reminder = len(_data) % self.object_size
         if reminder != 0:
             # object-align the end of data
-            obj = self.fetch_object(self.object_num + (len(_data) / self.object_size))
+            obj = self.fetch_object(self.object_num + (len(_data) // self.object_size))
             _data += obj[reminder:]
 
         assert len(_data) % self.object_size == 0, "Data not aligned!"
@@ -162,7 +161,7 @@ class SwiftStorage(object):
     @property
     def object_num(self):
         # object number based on the position
-        return self.pos / self.object_size
+        return self.pos // self.object_size
 
     @property
     def size(self):
@@ -172,11 +171,11 @@ class SwiftStorage(object):
         self.cache.flush()
 
     def object_name(self, object_num):
-        return "disk.part/%.8i" % object_num
+        return "disk.part/%08i" % object_num
 
     def fetch_object(self, object_num):
         if object_num >= self.objects:
-            return ''
+            return b''
 
         data = self.cache.get(object_num)
         if not data:
@@ -188,7 +187,7 @@ class SwiftStorage(object):
             except client.ClientException as ex:
                 if ex.http_status != 404:
                     raise StorageError(errno.EIO, ex)
-                return '\0' * self.object_size
+                return b'\0' * self.object_size
 
             if len(data) != self.object_size:
                 raise StorageError(errno.EIO,
@@ -205,7 +204,7 @@ class SwiftStorage(object):
 
         object_name = self.object_name(object_num)
         try:
-            etag = self.cli.put_object(self.container, object_name, StringIO(data))
+            etag = self.cli.put_object(self.container, object_name, data)
         except (socket.error, client.ClientException) as ex:
             raise StorageError(errno.EIO, ex)
 

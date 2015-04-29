@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 import unittest
 from hashlib import md5
+from io import StringIO
 import errno
 
 class MockConnection(object):
@@ -41,11 +42,11 @@ class MockConnection(object):
             self.http_status = http_status
 
     def __init__(self):
-        MockConnection.objects = dict(("disk.part/%.8i" % object_num, '\xff'*MockConnection.object_size) for object_num in range(8))
+        MockConnection.objects = dict(("disk.part/%08i" % object_num, b'\xff'*MockConnection.object_size) for object_num in range(8))
 
     @staticmethod
     def object(object_num):
-        return MockConnection.objects["disk.part/%.8i" % object_num]
+        return MockConnection.objects["disk.part/%08i" % object_num]
 
     @staticmethod
     def Connection(authurl, username, password):
@@ -60,11 +61,8 @@ class MockConnection(object):
         except KeyError:
             raise MockConnection.ClientException()
 
-    def put_object(self, container, object_name, obj):
-        data = obj.read()
-
+    def put_object(self, container, object_name, data):
         assert len(data) == self.object_size, "Data size mismatch"
-
         MockConnection.objects[object_name] = data
         return md5(data).hexdigest()
 
@@ -87,74 +85,74 @@ class SwiftStorageTestCase(unittest.TestCase):
     def test_read_full_object_content(self):
         self.store.seek(0)
         data = self.store.read(512)
-        self.assertEqual(data, '\xff'*512)
+        self.assertEqual(data, b'\xff'*512)
 
     def test_read_full_object_no_content(self):
         self.store.seek(8*512)
         data = self.store.read(512)
-        self.assertEqual(data, '\0'*512)
+        self.assertEqual(data, b'\0'*512)
 
     def test_write_full_object(self):
         self.store.seek(0)
-        self.store.write('X' * 512)
-        self.assertEqual(MockConnection.object(0), 'X'*512)
+        self.store.write(b'X'*512)
+        self.assertEqual(MockConnection.object(0), b'X'*512)
 
         self.store.seek(8*512)
-        self.store.write('X' * 512)
-        self.assertEqual(MockConnection.object(8), 'X'*512)
+        self.store.write(b'X'*512)
+        self.assertEqual(MockConnection.object(8), b'X'*512)
 
     def test_read_partial_object_content(self):
         self.store.seek(0)
         data = self.store.read(256)
-        self.assertEqual(data, '\xff'*256)
+        self.assertEqual(data, b'\xff'*256)
 
     def test_read_partial_object_no_content(self):
         self.store.seek(8*512)
         data = self.store.read(256)
-        self.assertEqual(data, '\0'*256)
+        self.assertEqual(data, b'\0'*256)
 
     def test_write_partial_object_content(self):
         self.store.seek(0)
-        self.store.write('X' * 256)
-        self.assertEqual(MockConnection.object(0), 'X'*256 + '\xff'*256)
+        self.store.write(b'X'*256)
+        self.assertEqual(MockConnection.object(0), b'X'*256 + b'\xff'*256)
 
     def test_write_partial_object_no_content(self):
         self.store.seek(8*512)
-        self.store.write('X' * 256)
-        self.assertEqual(MockConnection.object(8), 'X'*256 + '\0'*256)
+        self.store.write(b'X'*256)
+        self.assertEqual(MockConnection.object(8), b'X'*256 + b'\0'*256)
 
     def test_read_inter_object_content(self):
         self.store.seek(256)
         data = self.store.read(512)
-        self.assertEqual(data, '\xff'*512)
+        self.assertEqual(data, b'\xff'*512)
 
     def test_read_inter_object_no_content(self):
         self.store.seek(8*512 + 256)
         data = self.store.read(512)
-        self.assertEqual(data, '\0'*512)
+        self.assertEqual(data, b'\0'*512)
 
     def test_read_inter_object_content_and_no_content(self):
         self.store.seek(8*512 - 256)
         data = self.store.read(512)
-        self.assertEqual(data, '\xff'*256 +  '\0'*256)
+        self.assertEqual(data, b'\xff'*256 +  b'\0'*256)
 
     def test_write_inter_object_content(self):
         self.store.seek(256)
-        self.store.write('X' * 512)
-        self.assertEqual(MockConnection.object(0), '\xff'*256 + 'X'*256)
-        self.assertEqual(MockConnection.object(1), 'X'*256 + '\xff'*256)
+        self.store.write(b'X'*512)
+        self.assertEqual(MockConnection.object(0), b'\xff'*256 + b'X'*256)
+        self.assertEqual(MockConnection.object(1), b'X'*256 + b'\xff'*256)
 
     def test_write_inter_object_no_content(self):
         self.store.seek(8*512 + 256)
-        self.store.write('X' * 512)
-        self.assertEqual(MockConnection.object(8), '\0'*256 + 'X'*256)
-        self.assertEqual(MockConnection.object(9), 'X'*256 + '\0'*256)
+        self.store.write(b'X'*512)
+        self.assertEqual(MockConnection.object(8), b'\0'*256 + b'X'*256)
+        self.assertEqual(MockConnection.object(9), b'X'*256 + b'\0'*256)
 
     def test_write_inter_object_content_and_no_content(self):
         self.store.seek(8*512 - 256)
-        self.store.write('X' * 512)
-        self.assertEqual(MockConnection.object(7), '\xff'*256 + 'X'*256)
-        self.assertEqual(MockConnection.object(8), 'X'*256 + '\0'*256)
+        self.store.write(b'X'*512)
+        self.assertEqual(MockConnection.object(7), b'\xff'*256 + b'X'*256)
+        self.assertEqual(MockConnection.object(8), b'X'*256 + b'\0'*256)
 
     def test_seek_bad_offset(self):
         self.assertRaises(IOError, self.store.seek, -1)
@@ -179,5 +177,5 @@ class SwiftStorageTestCase(unittest.TestCase):
 
     def test_wite_end_of_disk(self):
         self.store.seek(15*512)
-        self.assertRaises(IOError, self.store.write, 'X' * 1024)
+        self.assertRaises(IOError, self.store.write, b'X'*1024)
 

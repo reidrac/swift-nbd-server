@@ -24,12 +24,10 @@ THE SOFTWARE.
 
 import os
 import sys
-import signal
 import socket
 import tempfile
 from argparse import ArgumentParser
 
-import gevent
 from swiftclient import client
 
 from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
@@ -119,7 +117,7 @@ class Main(object):
             return 1
 
         stores = dict()
-        for container, values in self.conf.iteritems():
+        for container, values in self.conf.items():
             cli = client.Connection(values['authurl'], values['username'], values['password'])
 
             try:
@@ -164,12 +162,9 @@ class Main(object):
         addr = (self.args.bind_address, self.args.bind_port)
         server = Server(addr, stores)
 
-        gevent.signal(signal.SIGTERM, server.stop)
-        gevent.signal(signal.SIGINT, server.stop)
-
         if not self.args.foreground:
             try:
-                if gevent.fork() != 0:
+                if os.fork() != 0:
                     os._exit(0)
             except OSError as ex:
                 self.log.error("Failed to daemonize: %s" % ex)
@@ -181,12 +176,10 @@ class Main(object):
             os.dup2(fd, sys.stdout.fileno())
             os.dup2(fd, sys.stderr.fileno())
 
-            gevent.reinit()
-
         self.log.info("Starting to serve on %s:%s" % (addr[0], addr[1]))
 
         try:
-            fd = os.open(self.args.pidfile, (os.O_CREAT|os.O_EXCL|os.O_WRONLY), 0644)
+            fd = os.open(self.args.pidfile, (os.O_CREAT|os.O_EXCL|os.O_WRONLY), 0o644)
         except OSError as ex:
             self.log.error("Failed to create the pidfile: %s" % ex)
             return 1

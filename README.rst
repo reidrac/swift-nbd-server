@@ -44,9 +44,8 @@ Install
 Requirements:
 
 - Linux (or any platform with NBD client; nbd-client 3.1+ recommended)
-- Python 2.7 (or later; Python 3 not supported yet)
+- Python 3.3 (or later; asyncio required with Python 3.3)
 - python-swiftclient
-- gevent
 
 To install the software, run the following command::
 
