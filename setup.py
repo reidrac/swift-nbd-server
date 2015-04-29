@@ -19,7 +19,7 @@ setup(name="swiftnbd",
       license="MIT",
       include_package_data=True,
       zip_safe=False,
-      install_requires=["python-swiftclient>=1.2.0", "gevent>=1.0"],
+      install_requires=["python-swiftclient>=1.2.0", "asyncio"],
       scripts=["bin/swiftnbd-server", "bin/swiftnbd-ctl"],
       packages=find_packages(exclude=["tests"]),
       classifiers=[
