@@ -25,7 +25,7 @@ setup(name="swiftnbd",
       classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3 :: Only",
         "Operating System :: OS Independent",
         "Environment :: No Input/Output (Daemon)",
         "License :: OSI Approved :: MIT License",
