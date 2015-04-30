@@ -2,6 +2,15 @@
 
 from setuptools import setup, find_packages
 from swiftnbd.const import version, project_url, description
+import sys
+
+if sys.version_info.major < 3 or \
+        sys.version_info.major == 3 and sys.version_info.minor < 3:
+    sys.exit("This software requires Python 3.3 or later.")
+
+install_requires = ["python-swiftclient>=1.2.0",]
+if sys.version_info.minor == 3:
+    install_requires.append("asyncio")
 
 def readme():
     try:
@@ -19,7 +28,7 @@ setup(name="swiftnbd",
       license="MIT",
       include_package_data=True,
       zip_safe=False,
-      install_requires=["python-swiftclient>=1.2.0", "asyncio"],
+      install_requires=install_requires,
       scripts=["bin/swiftnbd-server", "bin/swiftnbd-ctl"],
       packages=find_packages(exclude=["tests"]),
       classifiers=[
@@ -34,3 +43,4 @@ setup(name="swiftnbd",
       tests_require=["nose",],
       test_suite="nose.collector",
       )
+
