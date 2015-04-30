@@ -1,3 +1,10 @@
+2015-04-30 Juan J. Martinez <jjm@usebox.net>
+
+   * 0.10.2:
+
+     - Python 3 fixes in the control tool (download command)
+     - improved setup.py: detect required python version, only install asincio in 3.3
+
 2015-04-29 Juan J. Martinez <jjm@usebox.net>
 
    * 0.10.1:
