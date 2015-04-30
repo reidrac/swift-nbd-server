@@ -285,11 +285,11 @@ class Main(object):
         size = 0
         fdo = None
         try:
-            fdo = open(self.args.image, "w")
+            fdo = open(self.args.image, "wb")
 
             while True:
                 data = store.read(object_size)
-                if data == '':
+                if data == b'':
                     break
                 fdo.write(data)
                 size += len(data)
