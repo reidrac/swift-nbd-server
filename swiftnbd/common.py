@@ -80,7 +80,7 @@ class Config(object):
     def items(self):
         """
         Generator that returns pairs of container name and a dictionary with the values
-        associated to that contaiener.
+        associated to that container.
 
         See Config.DEFAULTS for the valid values.
         """
