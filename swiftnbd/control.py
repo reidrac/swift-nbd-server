@@ -29,7 +29,8 @@ from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbd.const import version, project_url, auth_url, object_size, secrets_file, disk_version
+from swiftnbd.const import (version, description, project_url, auth_url, secrets_file, object_size,
+        disk_version, keystone_separator, keystone_service, keystone_endpoint)
 from swiftnbd.common import setLog, setMeta, getMeta, Config
 from swiftnbd.swift import SwiftStorage, StorageError
 
@@ -94,6 +95,26 @@ class Main(object):
                             default=auth_url,
                             help="default authentication URL (default: %s)" % auth_url)
 
+        parser.add_argument("-k", "--keystone-auth", dest="keystone",
+                            action="store_true",
+                            help="use auth 2.0 (keystone, requires keystoneclient)")
+
+        parser.add_argument("--keystone-separator", dest="keystone_separator",
+                            default=keystone_separator,
+                            help="tenant separator to be used with auth 2.0 (default: %s)" % keystone_separator)
+
+        parser.add_argument("--keystone-service", dest="keystone_service",
+                            default=keystone_service,
+                            help="service to be used with auth 2.0 (default: %s)" % keystone_service)
+
+        parser.add_argument("--keystone-endpoint", dest="keystone_endpoint",
+                            default=keystone_endpoint,
+                            help="endpoint to be used with auth 2.0 (default: %s)" % keystone_endpoint)
+
+        parser.add_argument("--keystone-region", dest="keystone_region",
+                            default=None,
+                            help="region to be used with auth 2.0 (optional)")
+
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true",
                             help="enable verbose logging"
@@ -104,14 +125,12 @@ class Main(object):
         self.log = setLog(debug=self.args.verbose)
 
         try:
-            self.conf = Config(self.args.secrets_file, self.args.authurl)
+            self.conf = Config(self.args.secrets_file)
         except OSError as ex:
             parser.error("Failed to load secrets: %s" % ex)
 
         # setup by _setup_client()
-        self.authurl = None
-        self.username = None
-        self.password = None
+        self.auth = None
 
     def run(self):
         return self.args.func()
@@ -125,21 +144,10 @@ class Main(object):
         else:
             out = self.log.info
 
-        prev_authurl = None
         for container, values in self.conf.items():
-            if prev_authurl or prev_authurl != values['authurl']:
-                cli = client.Connection(values['authurl'], values['username'], values['password'])
+            cli, meta = self._setup_client(container=container)
 
-            try:
-                headers, _ = cli.get_container(container)
-            except (socket.error, client.ClientException) as ex:
-                if getattr(ex, 'http_status', None) == 404:
-                    self.log.error("%s doesn't exist (auth-url: %s)" % (container, values['authurl']))
-                else:
-                    self.log.error(ex)
-            else:
-
-                meta = getMeta(headers)
+            if cli:
                 self.log.debug("Meta: %s" % meta)
 
                 if meta:
@@ -153,41 +161,65 @@ class Main(object):
                 else:
                     out("%s is not a swiftnbd container" % container)
 
-            prev_authurl = values['authurl']
-
         return 0
 
-    def _setup_client(self, create=False):
+    def _setup_client(self, create=False, container=None):
         """
         Setup a client connection.
         If create is True and the container doesn't exist, it is created.
 
-        Sets username, password and authurl.
+        Sets auth dictionary to create connections.
 
         Returns a client connection, metadata tuple or (None, None) on error.
         """
 
+        if container is None:
+            container = self.args.container
+
         try:
-            values = self.conf.get_container(self.args.container)
+            values = self.conf.get_container(container)
         except ValueError as ex:
             self.log.error(ex)
             return (None, None)
 
-        self.authurl = values['authurl']
-        self.username = values['username']
-        self.password = values['password']
+        auth = dict(authurl = self.args.authurl,
+                    user = values['username'],
+                    key = values['password'],
+                    )
 
-        cli = client.Connection(self.authurl, self.username, self.password)
+        if self.args.keystone:
+            try:
+                from keystoneclient.v2_0 import client as _check_for_ksclient
+            except ImportError:
+                sys.exit("auth 2.0 (keystone) requires python-keystoneclient")
+            else:
+                self.log.debug("using auth 2.0 (keystone)")
+
+            if self.args.keystone_separator not in values['username']:
+                self.log.error("%s: separator not found in %r" % (container, values['username']))
+                return (None, None)
+
+            keystone_auth = values['username'].split(self.args.keystone_separator, 1)
+            auth['tenant_name'], auth['user'] = keystone_auth
+            auth['auth_version'] = '2.0'
+            auth['os_options'] = dict(service_type = self.args.keystone_service,
+                                      endpoint_type = self.args.keystone_endpoint,
+                                      region_name = self.args.keystone_region,
+                                      )
+            self.log.debug("os_options: %r" % auth['os_options'])
+
+        self.auth = auth
+        cli = client.Connection(**auth)
 
         try:
-            headers, _ = cli.get_container(self.args.container)
+            headers, _ = cli.get_container(container)
         except (socket.error, client.ClientException) as ex:
             if getattr(ex, 'http_status', None) == 404:
                 if create:
-                    self.log.warning("%s doesn't exist, will be created" % self.args.container)
+                    self.log.warning("%s doesn't exist, will be created" % container)
                     return (cli, dict())
                 else:
-                    self.log.error("%s doesn't exist" % self.args.container)
+                    self.log.error("%s doesn't exist" % container)
             else:
                 self.log.error(ex)
             return (None, None)
@@ -198,7 +230,7 @@ class Main(object):
         self.log.debug("Meta: %s" % meta)
 
         if not meta:
-            self.log.error("%s hasn't been setup to be used with swiftnbd" % self.args.container)
+            self.log.error("%s hasn't been setup to be used with swiftnbd" % container)
             return (None, None)
 
         return (cli, meta)
@@ -269,9 +301,7 @@ class Main(object):
         object_size = int(meta['object-size'])
         objects = int(meta['objects'])
 
-        store = SwiftStorage(self.authurl,
-                             self.username,
-                             self.password,
+        store = SwiftStorage(self.auth,
                              self.args.container,
                              object_size,
                              objects,

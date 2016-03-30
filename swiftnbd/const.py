@@ -41,3 +41,12 @@ disk_version = "1"
 # stats delay (seconds)
 stats_delay = 300
 
+# default tenant separator for auth 2.0 (eg, . for tenant.user)
+keystone_separator = "."
+
+# default service type for auth 2.0
+keystone_service = "object-store"
+
+# default endpoint type for auth 2.0
+keystone_endpoint = "publicURL"
+

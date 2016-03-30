@@ -48,6 +48,7 @@ Requirements:
 - Linux (or any platform with NBD client; nbd-client 3.1+ recommended)
 - Python 3.3 (or later; asyncio required with Python 3.3)
 - python-swiftclient
+- python-keystoneclient, optional: required for Auth 2.0 (keystone)
 
 To install the software, run the following command::
 
@@ -68,7 +69,6 @@ a *secrets.conf* file::
     username = user
     password = pass
 
-Optionally an *authurl* token can be used to specify an authentication URL per container.
 A container can be exported write protected with *read-only* token set to 1 (by default all
 containers are exported read-write).
 
@@ -163,6 +163,8 @@ Known issues and limitations
 - It can be used over the Internet but the performance is dependant on the bandwidth, so
   it's recommended that the storage is accessible via LAN (or same data center with 100 mbps
   or better).
+- Currently one instance of the server can't connect to more than one authentication
+  service, and either using Auth 1.0 or AUth 2.0 (keystone).
 
 
 License

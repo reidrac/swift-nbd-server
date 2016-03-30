@@ -59,15 +59,12 @@ class Config(object):
                  'read-only': '0',
                  }
 
-    def __init__(self, secrets_file, default_authurl=None):
+    def __init__(self, secrets_file):
         """
         Read configuration from the secrets file.
 
         A default_authurl can be provided.
         """
-        if default_authurl:
-            Config.DEFAULTS['authurl'] = default_authurl
-
         stat = os.stat(secrets_file)
         if stat.st_mode & 0x004 != 0:
             log = logging.getLogger(__package__)
@@ -96,7 +93,14 @@ class Config(object):
         if not self.conf.has_section(name):
             raise ValueError("%s not found in %s" % (name, self.secrets_file))
 
-        return dict(self.conf.items(name))
+        data =  dict(self.conf.items(name))
+
+        # deprecation warning
+        if data.pop("authurl"):
+            log = logging.getLogger(__package__)
+            log.warning("in container %r: 'authurl' config token is no longer in use and it'll be ignored" % name)
+
+        return data
 
     def list_containers(self):
         """List all container names."""

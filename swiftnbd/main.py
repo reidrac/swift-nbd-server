@@ -30,7 +30,8 @@ from argparse import ArgumentParser
 
 from swiftclient import client
 
-from swiftnbd.const import version, description, project_url, auth_url, secrets_file, disk_version
+from swiftnbd.const import (version, description, project_url, auth_url, secrets_file,
+        disk_version, keystone_separator, keystone_service, keystone_endpoint)
 from swiftnbd.common import setLog, getMeta, Config
 from swiftnbd.cache import Cache
 from swiftnbd.swift import SwiftStorage
@@ -57,6 +58,26 @@ class Main(object):
         parser.add_argument("-a", "--auth-url", dest="authurl",
                             default=auth_url,
                             help="default authentication URL (default: %s)" % auth_url)
+
+        parser.add_argument("-k", "--keystone-auth", dest="keystone",
+                            action="store_true",
+                            help="use auth 2.0 (keystone, requires keystoneclient)")
+
+        parser.add_argument("--keystone-separator", dest="keystone_separator",
+                            default=keystone_separator,
+                            help="tenant separator to be used with auth 2.0 (default: %s)" % keystone_separator)
+
+        parser.add_argument("--keystone-service", dest="keystone_service",
+                            default=keystone_service,
+                            help="service to be used with auth 2.0 (default: %s)" % keystone_service)
+
+        parser.add_argument("--keystone-endpoint", dest="keystone_endpoint",
+                            default=keystone_endpoint,
+                            help="endpoint to be used with auth 2.0 (default: %s)" % keystone_endpoint)
+
+        parser.add_argument("--keystone-region", dest="keystone_region",
+                            default=None,
+                            help="region to be used with auth 2.0 (optional)")
 
         parser.add_argument("-b", "--bind-address", dest="bind_address",
                             default="127.0.0.1",
@@ -106,7 +127,7 @@ class Main(object):
         self.log = setLog(debug=self.args.verbose, use_syslog=self.args.syslog, use_file=self.args.log_file)
 
         try:
-            self.conf = Config(self.args.secrets_file, self.args.authurl)
+            self.conf = Config(self.args.secrets_file)
         except OSError as ex:
             parser.error("Failed to load secrets: %s" % ex)
 
@@ -118,7 +139,33 @@ class Main(object):
 
         stores = dict()
         for container, values in self.conf.items():
-            cli = client.Connection(values['authurl'], values['username'], values['password'])
+            auth = dict(authurl = self.args.authurl,
+                        user = values['username'],
+                        key = values['password'],
+                        )
+
+            if self.args.keystone:
+                try:
+                    from keystoneclient.v2_0 import client as _check_for_ksclient
+                except ImportError:
+                    sys.exit("auth 2.0 (keystone) requires python-keystoneclient")
+                else:
+                    self.log.debug("using auth 2.0 (keystone)")
+
+                if self.args.keystone_separator not in values['username']:
+                    self.log.error("%s: separator not found in %r, skipping" % (container, values['username']))
+                    continue
+
+                keystone_auth = values['username'].split(self.args.keystone_separator, 1)
+                auth['tenant_name'], auth['user'] = keystone_auth
+                auth['auth_version'] = '2.0'
+                auth['os_options'] = dict(service_type = self.args.keystone_service,
+                                          endpoint_type = self.args.keystone_endpoint,
+                                          region_name = self.args.keystone_region,
+                                          )
+                self.log.debug("os_options: %r" % auth['os_options'])
+
+            cli = client.Connection(**auth)
 
             try:
                 headers, _ = cli.get_container(container)
@@ -127,8 +174,8 @@ class Main(object):
                     self.log.warning("%s doesn't exist, skipping" % container)
                     continue
                 else:
-                    self.log.error(ex)
-                    return 1
+                    self.log.error("%s: %r, skipping" % (container, ex.msg))
+                    continue
 
             self.log.debug(headers)
 
@@ -149,9 +196,7 @@ class Main(object):
             if meta['version'] != disk_version:
                 self.log.warning("Version mismatch %s != %s in %s" % (meta['version'], disk_version, container))
 
-            stores[container] = SwiftStorage(values['authurl'],
-                                             values['username'],
-                                             values['password'],
+            stores[container] = SwiftStorage(auth,
                                              container,
                                              object_size,
                                              objects,

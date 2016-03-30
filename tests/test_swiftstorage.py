@@ -49,7 +49,7 @@ class MockConnection(object):
         return MockConnection.objects["disk.part/%08i" % object_num]
 
     @staticmethod
-    def Connection(authurl, username, password):
+    def Connection(**kwargs):
         return MockConnection()
 
     def get_container(self, container):
@@ -76,7 +76,7 @@ class SwiftStorageTestCase(unittest.TestCase):
 
         # create a disk doubling the actual size of the mock up so we
         # have some uninitialised space to run tests
-        self.store = SwiftStorage('url', 'user', 'pass', 'container', 512, 16)
+        self.store = SwiftStorage(dict(), 'container', 512, 16)
         self.store.flush()
 
     def tearDown(self):
