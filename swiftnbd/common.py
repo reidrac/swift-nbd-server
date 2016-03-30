@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 swiftnbd. common toolset
-Copyright (C) 2013-2015 by Juan J. Martinez <jjm@usebox.net>
+Copyright (C) 2013-2016 by Juan J. Martinez <jjm@usebox.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
