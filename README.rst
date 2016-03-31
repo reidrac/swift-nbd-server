@@ -164,7 +164,7 @@ Known issues and limitations
   it's recommended that the storage is accessible via LAN (or same data center with 100 mbps
   or better).
 - Currently one instance of the server can't connect to more than one authentication
-  service, and either using Auth 1.0 or AUth 2.0 (keystone).
+  service, and either using Auth 1.0 or Auth 2.0 (keystone).
 
 
 License
